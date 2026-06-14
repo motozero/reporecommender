@@ -16,6 +16,12 @@
   "workers_dev": true,
   "routes": [
     { "pattern": "reporecommender.com", "custom_domain": true }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "MCP_OBJECT", "class_name": "RecommenderMCP" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["RecommenderMCP"] }
   ]
   // Added later (D1 lesson):
   // "d1_databases": [

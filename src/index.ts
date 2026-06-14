@@ -1,15 +1,27 @@
 import { recommend, type EngineEnv } from "./engine";
+import { RecommenderMCP } from "./mcp";
+
+export { RecommenderMCP };
 
 export interface Env extends EngineEnv {
   ASSETS: Fetcher;
+  MCP_OBJECT: DurableObjectNamespace;
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    // Surface 2: our own MCP server (Streamable HTTP at /mcp, SSE at /sse).
+    if (url.pathname === "/mcp") {
+      return RecommenderMCP.serve("/mcp").fetch(request, env, ctx);
+    }
+    if (url.pathname === "/sse" || url.pathname === "/sse/message") {
+      return RecommenderMCP.serveSSE("/sse").fetch(request, env, ctx);
+    }
+
     if (url.pathname === "/api/health") {
-      return Response.json({ ok: true, service: "reporecommender", version: "0.2.0" });
+      return Response.json({ ok: true, service: "reporecommender", version: "0.3.0" });
     }
 
     if (url.pathname === "/api/recommend" && request.method === "POST") {
