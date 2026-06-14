@@ -47,11 +47,13 @@ features get used. Index below; more land as the build proceeds.
 **Before we build:** what we built and what we are building; the Claude toolkit and product map;
 PRD and plan mode; permissions and safe autonomy.
 
-**Build it:** Cloudflare step zero; `claude init` and CLAUDE.md; custom skills; integrations and MCP;
-context window management; model tiering with tokens, pricing, and latency; subagents; hooks; git and
-worktrees; [secrets and key management](./lessons/14-secrets-and-keys.md).
+**Build it:** Cloudflare step zero; [`claude init` and CLAUDE.md](./lessons/06-claude-init-and-claude-md.md);
+custom skills; integrations and MCP; context window management; model tiering with tokens, pricing, and
+latency; subagents; [hooks](./lessons/12-hooks.md); git and worktrees;
+[secrets and key management](./lessons/14-secrets-and-keys.md).
 
-**Team and quality:** working with others; debugging; owning your tests; running evals; deploy.
+**Team and quality:** working with others; [debugging](./lessons/16-debugging.md); owning your tests;
+running evals; deploy.
 
 ## Built with Claude Code
 
