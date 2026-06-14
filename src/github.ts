@@ -39,8 +39,9 @@ export function parseRepo(input: string): { owner: string; repo: string } | null
     : trimmed.match(/^([^/\s]+)\/([^/\s]+)$/)?.slice(1);
   if (!pair) return null;
   const owner = pair[0];
-  const repo = pair[1].replace(/\.git$/, "");
-  if (!owner || !repo) return null;
+  const repoRaw = pair[1];
+  if (!owner || !repoRaw) return null;
+  const repo = repoRaw.replace(/\.git$/, "");
   return { owner, repo };
 }
 

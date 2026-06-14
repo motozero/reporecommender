@@ -6,4 +6,5 @@
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
 
 # GitHub personal access token, read-only public scope, for search rate limits.
-GITHUB_TOKEN=ghp_xxxxxxxx
+# Optional. Leave blank to run unauthenticated (60 requests/hour, fine for dev).
+GITHUB_TOKEN=
