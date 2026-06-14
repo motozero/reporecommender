@@ -1,0 +1,7 @@
+graph LR
+  A["GitHub repo or website URL"] --> E["recommend() engine"]
+  B["goal"] --> E
+  E --> W["Web API (/api/recommend)"]
+  E --> M["MCP server (/mcp)"]
+  W --> BR["Browser (humans)"]
+  M --> AG["Claude Code, Claude Desktop, any agent"]

@@ -1,5 +1,9 @@
 # Lesson 8: integrations and MCP
 
+![One engine, two surfaces: the recommend engine feeds a Web API for browsers and an MCP server for agents](./assets/one-engine-two-surfaces-handdrawn.png)
+
+![The MCP stack: an MCP client talks to the protocol, the Agents SDK implements it on Workers, backed by a SQLite Durable Object](./assets/mcp-three-layers-handdrawn.png)
+
 **What it is.** MCP (Model Context Protocol) is Anthropic's open standard for connecting AI models to
 tools and data. An MCP *server* exposes tools. An MCP *client* (Claude Code, Claude Desktop, Cursor,
 ChatGPT connectors) calls them. It is the universal adapter, the USB-C for AI tools: build one server,

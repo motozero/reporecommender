@@ -17,6 +17,8 @@ Two things at once:
 
 ## How it works: one engine, two surfaces
 
+![One engine, two surfaces: the recommend engine feeds a Web API for browsers and an MCP server for agents](./lessons/assets/one-engine-two-surfaces-handdrawn.png)
+
 The recommendation logic lives once, in `src/engine.ts` (`recommend(repoUrl, goal)`). It is exposed
 through two surfaces:
 
@@ -25,6 +27,10 @@ through two surfaces:
   call the same capability. We build an MCP server here, not just consume one.
 
 The caller decides the interface: software uses the API, agents use MCP.
+
+The request flow, end to end:
+
+![Request flow: repo or website URL plus a goal, Haiku extracts purpose and queries, GitHub search ranked by stars, Sonnet ranks and writes what why and how, enrich with contributors and velocity, result cards](./lessons/assets/request-flow-handdrawn.png)
 
 ## Stack
 

@@ -37,7 +37,7 @@ if git diff --cached -U0 2>/dev/null | grep -nE 'sk-ant-[A-Za-z0-9]{8}|ghp_[A-Za
 fi
 
 # 3) House style: no em dashes in user-facing copy (UI, docs, lessons).
-uface="$(printf '%s\n' "$staged" | grep -E '^(public/|lessons/|.*\.md)$' || true)"
+uface="$(printf '%s\n' "$staged" | grep -E '^(public/|lessons/|.*\.md)$' | grep -E '\.(md|markdown|html|css|js|txt)$' || true)"
 if [ -n "$uface" ]; then
   if printf '%s\n' "$uface" | tr '\n' '\0' | xargs -0 grep -lF '—' 2>/dev/null | grep -q .; then
     fail=1

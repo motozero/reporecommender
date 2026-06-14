@@ -1,5 +1,7 @@
 # Lesson 3: PRD and plan mode
 
+![Plan mode is read-only exploration and a proposal you approve, then build mode writes, commits, and deploys](./assets/plan-vs-build-handdrawn.png)
+
 **What it is.** Plan mode lets Claude Code explore the codebase read-only and propose an
 implementation plan that you approve before it writes a single line. The PRD (a short product
 requirements note) is the "what." Plan mode is where the "how" gets agreed. Build mode is where it

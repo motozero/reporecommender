@@ -1,0 +1,5 @@
+graph TD
+  A["MCP client: Claude Code, Claude Desktop, any agent"] --> B["MCP protocol: the standard handshake and tools"]
+  B --> C["Agents SDK (McpAgent): implements MCP on Workers"]
+  C --> D["SQLite Durable Object: holds each session state"]
+  C --> E["recommend_repos tool calls the recommend() engine"]

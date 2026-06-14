@@ -1,5 +1,7 @@
 # Lesson 10: model tiering, tokens, pricing, and latency
 
+![Match the model to the work: mechanical steps go to Haiku, judgment steps go to Sonnet, escalate to Opus or Fable only if needed](./assets/model-tiering-handdrawn.png)
+
 **What it is.** Not every step needs your most capable model. Match the model to the job: a cheap,
 fast model for mechanical work (extract, classify, route) and a stronger model for judgment (rank,
 write, decide). This is the single biggest lever on cost and latency in an LLM app.
