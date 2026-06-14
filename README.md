@@ -45,15 +45,16 @@ A two-week curriculum that teaches Claude Code through the real build. Lessons a
 features get used. Index below; more land as the build proceeds.
 
 **Before we build:** what we built and what we are building; the Claude toolkit and product map;
-PRD and plan mode; permissions and safe autonomy.
+[PRD and plan mode](./lessons/03-prd-and-plan-mode.md); permissions and safe autonomy.
 
 **Build it:** Cloudflare step zero; [`claude init` and CLAUDE.md](./lessons/06-claude-init-and-claude-md.md);
-custom skills; integrations and MCP; context window management; model tiering with tokens, pricing, and
+custom skills; integrations and MCP; context window management;
+[model tiering](./lessons/10-model-tiering-and-cost.md) with tokens, pricing, and
 latency; subagents; [hooks](./lessons/12-hooks.md); git and worktrees;
 [secrets and key management](./lessons/14-secrets-and-keys.md).
 
 **Team and quality:** working with others; [debugging](./lessons/16-debugging.md); owning your tests;
-running evals; deploy.
+running evals; [deploy](./lessons/19-deploy.md).
 
 ## Built with Claude Code
 
