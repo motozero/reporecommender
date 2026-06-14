@@ -11,6 +11,7 @@ export interface RepoMeta {
   repo: string;
   description: string | null;
   stars: number;
+  forks: number;
   language: string | null;
   topics: string[];
   pushedAt: string | null;
@@ -55,6 +56,7 @@ export async function getRepo(owner: string, repo: string, token?: string): Prom
     repo: d.name ?? repo,
     description: d.description ?? null,
     stars: d.stargazers_count ?? 0,
+    forks: d.forks_count ?? 0,
     language: d.language ?? null,
     topics: Array.isArray(d.topics) ? d.topics : [],
     pushedAt: d.pushed_at ?? null,
@@ -95,12 +97,13 @@ export async function searchRepos(
   const items = d.items ?? [];
   return items
     .filter((it) => it.full_name?.toLowerCase() !== exclude?.toLowerCase())
-    .map((it) => ({
+    .map((it): RepoMeta => ({
       fullName: it.full_name,
       owner: it.owner?.login ?? "",
       repo: it.name ?? "",
       description: it.description ?? null,
       stars: it.stargazers_count ?? 0,
+      forks: it.forks_count ?? 0,
       language: it.language ?? null,
       topics: Array.isArray(it.topics) ? it.topics : [],
       pushedAt: it.pushed_at ?? null,
@@ -109,4 +112,32 @@ export async function searchRepos(
       openIssues: it.open_issues_count ?? 0,
       url: it.html_url ?? "",
     }));
+}
+
+// Count items in a paginated list cheaply: request one per page and read the
+// Link header's rel="last" page number, which equals the total. Returns null
+// when the endpoint is unavailable (rate limit, empty repo, 403 on huge repos).
+async function countViaLink(url: string, token?: string): Promise<number | null> {
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: headers(token) });
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  const link = res.headers.get("link");
+  const last = link?.match(/[?&]page=(\d+)>;\s*rel="last"/);
+  if (last?.[1]) return Number(last[1]);
+  const arr = (await res.json().catch(() => [])) as unknown[];
+  return Array.isArray(arr) ? arr.length : null;
+}
+
+/** Number of contributors ("community members"), anonymous included. */
+export function getContributorCount(owner: string, repo: string, token?: string): Promise<number | null> {
+  return countViaLink(`${API}/repos/${owner}/${repo}/contributors?per_page=1&anon=true`, token);
+}
+
+/** Commits since the given ISO date (a velocity proxy). */
+export function getCommitsSince(owner: string, repo: string, sinceIso: string, token?: string): Promise<number | null> {
+  return countViaLink(`${API}/repos/${owner}/${repo}/commits?per_page=1&since=${encodeURIComponent(sinceIso)}`, token);
 }

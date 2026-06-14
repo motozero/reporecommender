@@ -6,7 +6,15 @@
 // way we produce an Analysis (purpose, stack, search queries), then run the same
 // GitHub search and ranking. Recommendations are always GitHub repos.
 
-import { parseRepo, getRepo, getReadme, searchRepos, type RepoMeta } from "./github";
+import {
+  parseRepo,
+  getRepo,
+  getReadme,
+  searchRepos,
+  getContributorCount,
+  getCommitsSince,
+  type RepoMeta,
+} from "./github";
 import { callClaude, extractJson, MODELS } from "./claude";
 
 export interface EngineEnv {
@@ -18,8 +26,14 @@ export interface Recommendation {
   fullName: string;
   url: string;
   stars: number;
+  forks: number;
   language: string | null;
-  whyItFits: string;
+  lastUpdated: string | null; // ISO date of last push
+  contributors: number | null; // null when GitHub did not return it
+  velocity90d: number | null; // commits in the last 90 days
+  whatIsIt: string;
+  why: string;
+  how: string;
   ratings: { easeOfUse: number; impact: number };
 }
 
@@ -57,6 +71,9 @@ export async function recommend(
   if (candidates.length === 0) return { source, goal, recommendations: [] };
 
   const recommendations = await curate(ctx, goal, candidates, key);
+  // Objective metrics come straight from GitHub, only for the final picks, to
+  // keep the per-request call count small.
+  await enrichMetrics(recommendations, token);
   return { source, goal, recommendations };
 }
 
@@ -213,15 +230,24 @@ async function curate(
     "",
     "Choose the 3 to 5 best complements. For each return an object:",
     '{"fullName": "owner/repo exactly as listed",',
-    ` "whyItFits": "2 to 3 sentences, specific to THIS ${noun} and goal, no em dashes",`,
+    ' "whatIsIt": "one sentence on what this repo is",',
+    ` "why": "1 to 2 sentences on why it complements THIS ${noun} and goal, no em dashes",`,
+    ' "how": "one sentence on how to integrate it",',
     ' "easeOfUse": integer 1 to 5,',
     ' "impact": integer 1 to 5 for how much it advances the goal}',
     "",
     'Return JSON shaped as {"recommendations": [ ... ]}.',
   ].join("\n");
-  const text = await callClaude({ apiKey, model: MODELS.sonnet, system, user, maxTokens: 1500 });
+  const text = await callClaude({ apiKey, model: MODELS.sonnet, system, user, maxTokens: 2200 });
   const parsed = extractJson<{
-    recommendations: { fullName: string; whyItFits: string; easeOfUse: number; impact: number }[];
+    recommendations: {
+      fullName: string;
+      whatIsIt: string;
+      why: string;
+      how: string;
+      easeOfUse: number;
+      impact: number;
+    }[];
   }>(text);
 
   const byName = new Map(candidates.map((c) => [c.fullName.toLowerCase(), c]));
@@ -233,12 +259,37 @@ async function curate(
       fullName: cand.fullName,
       url: cand.url,
       stars: cand.stars,
+      forks: cand.forks,
       language: cand.language,
-      whyItFits: r.whyItFits,
+      lastUpdated: cand.pushedAt,
+      contributors: null,
+      velocity90d: null,
+      whatIsIt: r.whatIsIt,
+      why: r.why,
+      how: r.how,
       ratings: { easeOfUse: clamp(r.easeOfUse), impact: clamp(r.impact) },
     });
   }
   return out;
+}
+
+// Objective metrics straight from GitHub, fetched in parallel for the final
+// picks only. Each call degrades to null on rate limits, so the cards still
+// render. With a GITHUB_TOKEN set, all of this stays well inside the limits.
+async function enrichMetrics(recs: Recommendation[], token?: string): Promise<void> {
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  await Promise.all(
+    recs.map(async (r) => {
+      const [owner, repo] = r.fullName.split("/");
+      if (!owner || !repo) return;
+      const [contributors, velocity] = await Promise.all([
+        getContributorCount(owner, repo, token),
+        getCommitsSince(owner, repo, since, token),
+      ]);
+      r.contributors = contributors;
+      r.velocity90d = velocity;
+    }),
+  );
 }
 
 // Website helpers.

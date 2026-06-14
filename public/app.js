@@ -60,12 +60,35 @@ function card(r, i) {
       </div>
       <a class="name" href="${escapeAttr(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.fullName)}</a>
       <span class="lang">${escapeHtml(r.language || "")}</span>
-      <p class="why">${escapeHtml(r.whyItFits)}</p>
+      <p class="line"><b>What:</b> ${escapeHtml(r.whatIsIt || "")}</p>
+      <p class="line"><b>Why:</b> ${escapeHtml(r.why || "")}</p>
+      <p class="line"><b>How:</b> ${escapeHtml(r.how || "")}</p>
       <div class="ratings">
         ${ratingRow("Ease", r.ratings.easeOfUse)}
         ${ratingRow("Impact", r.ratings.impact)}
       </div>
+      <div class="metrics">
+        <span>Updated ${relativeTime(r.lastUpdated)}</span>
+        <span>${metricNum(r.velocity90d)} commits/90d</span>
+        <span>${metricNum(r.forks)} forks</span>
+        <span>${metricNum(r.contributors)} contributors</span>
+      </div>
     </article>`;
+}
+
+function relativeTime(iso) {
+  if (!iso) return "unknown";
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return days + "d ago";
+  if (days < 365) return Math.floor(days / 30) + "mo ago";
+  return Math.floor(days / 365) + "y ago";
+}
+
+function metricNum(n) {
+  if (n === null || n === undefined) return "n/a";
+  return formatStars(n);
 }
 
 function ratingRow(label, value) {
