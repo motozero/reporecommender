@@ -12,7 +12,11 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "reporecommender.com", "custom_domain": true }
+  ]
   // Added later (D1 lesson):
   // "d1_databases": [
   //   { "binding": "DB", "database_name": "reporecommender", "database_id": "<from wrangler d1 create>" }
