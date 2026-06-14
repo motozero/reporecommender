@@ -44,13 +44,15 @@ npm run dev                     # http://localhost:8787
 A two-week curriculum that teaches Claude Code through the real build. Lessons are written as the
 features get used. Index below; more land as the build proceeds.
 
-**Before we build:** what we built and what we are building; the Claude toolkit and product map;
+**Before we build:** [what we built and what we are building](./lessons/01-what-we-built.md); the
+Claude toolkit and product map;
 [PRD and plan mode](./lessons/03-prd-and-plan-mode.md); permissions and safe autonomy.
 
 **Build it:** Cloudflare step zero; [`claude init` and CLAUDE.md](./lessons/06-claude-init-and-claude-md.md);
-custom skills; [integrations and MCP](./lessons/08-integrations-and-mcp.md); context window management;
+[custom skills](./lessons/07-custom-skills.md); [integrations and MCP](./lessons/08-integrations-and-mcp.md);
+context window management;
 [model tiering](./lessons/10-model-tiering-and-cost.md) with tokens, pricing, and
-latency; subagents; [hooks](./lessons/12-hooks.md); git and worktrees;
+latency; subagents; [hooks](./lessons/12-hooks.md); [git and worktrees](./lessons/13-git-and-worktrees.md);
 [secrets and key management](./lessons/14-secrets-and-keys.md).
 
 **Team and quality:** working with others; [debugging](./lessons/16-debugging.md); owning your tests;
