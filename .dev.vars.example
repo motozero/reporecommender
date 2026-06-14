@@ -1,0 +1,9 @@
+# Copy this file to .dev.vars (which is gitignored) and fill in real values.
+# NEVER commit .dev.vars or real keys. In production these are set with
+# `wrangler secret put <NAME>`, not stored in the repo. See lessons/14-secrets-and-keys.md.
+
+# Anthropic API key for the recommendation engine (console.anthropic.com).
+ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
+
+# GitHub personal access token, read-only public scope, for search rate limits.
+GITHUB_TOKEN=ghp_xxxxxxxx

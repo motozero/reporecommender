@@ -1,0 +1,20 @@
+{
+  // Repo Recommender: one Worker serves the static frontend (Static Assets)
+  // and the /api/* routes. D1 binding is added in the database lesson.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "reporecommender",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Added later (D1 lesson):
+  // "d1_databases": [
+  //   { "binding": "DB", "database_name": "reporecommender", "database_id": "<from wrangler d1 create>" }
+  // ]
+}
