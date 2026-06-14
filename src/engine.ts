@@ -1,6 +1,10 @@
 // The shared recommendation engine. This is the ONLY place the recommendation
 // logic lives. Both surfaces (the Web API in index.ts and the MCP server in
 // mcp.ts) call recommend() and just shape the result.
+//
+// The input can be a GitHub repo (URL or owner/repo) OR a website URL. Either
+// way we produce an Analysis (purpose, stack, search queries), then run the same
+// GitHub search and ranking. Recommendations are always GitHub repos.
 
 import { parseRepo, getRepo, getReadme, searchRepos, type RepoMeta } from "./github";
 import { callClaude, extractJson, MODELS } from "./claude";
@@ -20,7 +24,7 @@ export interface Recommendation {
 }
 
 export interface RecommendResult {
-  source: { fullName: string; purpose: string; stack: string[] };
+  source: { fullName: string; kind: "repo" | "website"; purpose: string; stack: string[] };
   goal: string;
   recommendations: Recommendation[];
 }
@@ -31,36 +35,63 @@ interface Analysis {
   searchQueries: string[];
 }
 
+interface SourceContext extends Analysis {
+  fullName: string;
+  kind: "repo" | "website";
+  langHint?: string;
+  exclude?: string;
+}
+
 export async function recommend(
-  repoUrl: string,
+  input: string,
   goal: string,
   env: EngineEnv,
 ): Promise<RecommendResult> {
-  const parsed = parseRepo(repoUrl);
-  if (!parsed) {
-    throw new Error("Could not find a GitHub repo in that input. Use a URL or owner/repo.");
-  }
-
+  const key = env.ANTHROPIC_API_KEY;
   const token = env.GITHUB_TOKEN || undefined;
-  const meta = await getRepo(parsed.owner, parsed.repo, token);
-  const readme = await getReadme(parsed.owner, parsed.repo, token);
 
-  // Step 1 (Haiku): cheap extraction of purpose, stack, and a search query.
-  const analysis = await analyze(meta, readme, goal, env.ANTHROPIC_API_KEY);
+  const ctx = await analyzeSource(input, goal, key, token);
+  const source = { fullName: ctx.fullName, kind: ctx.kind, purpose: ctx.purpose, stack: ctx.stack };
 
-  // Step 2: gather complement candidates from several canonical queries, then
-  // rank by stars so the well-known tools surface, not just literal matches.
-  const candidates = await gatherCandidates(analysis, goal, meta, token);
-
-  const source = { fullName: meta.fullName, purpose: analysis.purpose, stack: analysis.stack };
+  const candidates = await gatherCandidates(ctx, goal, token);
   if (candidates.length === 0) return { source, goal, recommendations: [] };
 
-  // Step 3 (Sonnet): rank and write the per-repo rationale + ratings.
-  const recommendations = await curate(meta, analysis, goal, candidates, env.ANTHROPIC_API_KEY);
+  const recommendations = await curate(ctx, goal, candidates, key);
   return { source, goal, recommendations };
 }
 
-async function analyze(
+// Step 1: figure out what the input is (repo or website) and extract purpose,
+// stack, and search queries with Haiku.
+async function analyzeSource(
+  input: string,
+  goal: string,
+  key: string,
+  token?: string,
+): Promise<SourceContext> {
+  const repo = parseRepo(input);
+  if (repo) {
+    const meta = await getRepo(repo.owner, repo.repo, token);
+    const readme = await getReadme(repo.owner, repo.repo, token);
+    const analysis = await analyzeRepo(meta, readme, goal, key);
+    return {
+      ...analysis,
+      fullName: meta.fullName,
+      kind: "repo",
+      langHint: meta.language ?? undefined,
+      exclude: meta.fullName,
+    };
+  }
+
+  if (looksLikeUrl(input)) {
+    const site = await fetchSite(input);
+    const analysis = await analyzeSite(site, goal, key);
+    return { ...analysis, fullName: site.host, kind: "website" };
+  }
+
+  throw new Error("Enter a GitHub repo (URL or owner/repo) or a website URL.");
+}
+
+async function analyzeRepo(
   meta: RepoMeta,
   readme: string,
   goal: string,
@@ -78,12 +109,41 @@ async function analyze(
     "",
     `The user wants to improve this project with: "${goal}".`,
     "",
-    "Return JSON with exactly these keys:",
-    '{"purpose": "one or two sentences on what this repo does",',
-    ' "stack": ["key languages, frameworks, runtimes"],',
-    ' "searchQueries": ["2 or 3 SHORT GitHub search queries (each 1 to 3 words, optionally one qualifier like language:) that surface repos COMPLEMENTING this project for the goal. Use the canonical terms practitioners use, for example: task queue, job scheduler, celery. GitHub ANDs every word, so keep each query short."]}',
+    jsonInstruction("what this repo does"),
   ].join("\n");
-  const text = await callClaude({ apiKey, model: MODELS.haiku, system, user, maxTokens: 500 });
+  return parseAnalysis(await callClaude({ apiKey, model: MODELS.haiku, system, user, maxTokens: 500 }));
+}
+
+async function analyzeSite(
+  site: { host: string; title: string; text: string },
+  goal: string,
+  apiKey: string,
+): Promise<Analysis> {
+  const system = "You analyze a website and return strict JSON only. No prose, no code fences.";
+  const user = [
+    `Website: ${site.host}`,
+    `Title: ${site.title || "(none)"}`,
+    "",
+    "Page content (text excerpt):",
+    site.text.slice(0, 4000) || "(no readable content)",
+    "",
+    `The user wants to add or improve: "${goal}".`,
+    "",
+    jsonInstruction("what this site or project is"),
+  ].join("\n");
+  return parseAnalysis(await callClaude({ apiKey, model: MODELS.haiku, system, user, maxTokens: 500 }));
+}
+
+function jsonInstruction(purposeHint: string): string {
+  return [
+    "Return JSON with exactly these keys:",
+    `{"purpose": "one or two sentences on ${purposeHint}",`,
+    ' "stack": ["key languages, frameworks, or themes; best guess is fine"],',
+    ' "searchQueries": ["2 or 3 SHORT GitHub search queries (each 1 to 3 words, optionally one qualifier like language:) for repos that would help BUILD the user\'s goal. Use the canonical terms practitioners use, for example: rag, vector database, chatbot. GitHub ANDs every word, so keep each query short."]}',
+  ].join("\n");
+}
+
+function parseAnalysis(text: string): Analysis {
   const parsed = extractJson<{ purpose: string; stack?: string[]; searchQueries?: string[] | string }>(text);
   const searchQueries = Array.isArray(parsed.searchQueries)
     ? parsed.searchQueries
@@ -91,9 +151,44 @@ async function analyze(
   return { purpose: parsed.purpose, stack: parsed.stack ?? [], searchQueries };
 }
 
+// Step 2: gather complement candidates from several canonical queries, then rank
+// by stars so the well-known tools surface. GitHub ANDs every word, so breadth
+// across short queries beats one long query.
+async function gatherCandidates(
+  ctx: SourceContext,
+  goal: string,
+  token?: string,
+): Promise<RepoMeta[]> {
+  const lang = ctx.langHint ? `language:${ctx.langHint}` : "";
+  const goalWords = goal.replace(/[^\w\s]/g, " ").trim();
+  const queries = [...ctx.searchQueries.slice(0, 3), [goalWords, lang].filter(Boolean).join(" "), goalWords];
+
+  const merged = new Map<string, RepoMeta>();
+  const seenQuery = new Set<string>();
+  for (const raw of queries) {
+    const q = (raw ?? "").trim();
+    if (!q || seenQuery.has(q)) continue;
+    seenQuery.add(q);
+    if (seenQuery.size > 4) break; // cap GitHub search calls per request
+    let hits: RepoMeta[] = [];
+    try {
+      hits = await searchRepos(q, token, 8, ctx.exclude);
+    } catch {
+      continue; // a bad query should not sink the whole request
+    }
+    for (const h of hits) {
+      const k = h.fullName.toLowerCase();
+      if (!merged.has(k)) merged.set(k, h);
+    }
+    if (merged.size >= 12) break;
+  }
+
+  return [...merged.values()].sort((a, b) => b.stars - a.stars).slice(0, 12);
+}
+
+// Step 3: rank and write the per-repo rationale + ratings with Sonnet.
 async function curate(
-  meta: RepoMeta,
-  analysis: Analysis,
+  ctx: SourceContext,
   goal: string,
   candidates: RepoMeta[],
   apiKey: string,
@@ -106,10 +201,11 @@ async function curate(
     "Write in a direct, concrete style. No em dashes. No marketing language.",
     "Return strict JSON only, no prose, no code fences.",
   ].join(" ");
+  const noun = ctx.kind === "website" ? "website" : "project";
   const user = [
-    `The user's project: ${meta.fullName}`,
-    `What it does: ${analysis.purpose}`,
-    `Stack: ${analysis.stack.join(", ")}`,
+    `The user's ${noun}: ${ctx.fullName}`,
+    `What it is: ${ctx.purpose}`,
+    `Stack or themes: ${ctx.stack.join(", ")}`,
     `Their goal: "${goal}"`,
     "",
     "Candidate repos:",
@@ -117,7 +213,7 @@ async function curate(
     "",
     "Choose the 3 to 5 best complements. For each return an object:",
     '{"fullName": "owner/repo exactly as listed",',
-    ' "whyItFits": "2 to 3 sentences, specific to THIS project and goal, no em dashes",',
+    ` "whyItFits": "2 to 3 sentences, specific to THIS ${noun} and goal, no em dashes",`,
     ' "easeOfUse": integer 1 to 5,',
     ' "impact": integer 1 to 5 for how much it advances the goal}',
     "",
@@ -145,44 +241,50 @@ async function curate(
   return out;
 }
 
-// Run several short queries (the model's canonical terms plus goal-based
-// fallbacks), merge and dedupe, then rank by stars so the well-known tools
-// surface. GitHub ANDs every word, so breadth across queries beats one long one.
-async function gatherCandidates(
-  analysis: Analysis,
-  goal: string,
-  meta: RepoMeta,
-  token?: string,
-): Promise<RepoMeta[]> {
-  const lang = meta.language ? `language:${meta.language}` : "";
-  const goalWords = goal.replace(/[^\w\s]/g, " ").trim();
-  const queries = [
-    ...analysis.searchQueries.slice(0, 3),
-    [goalWords, lang].filter(Boolean).join(" "),
-    goalWords,
-  ];
+// Website helpers.
 
-  const merged = new Map<string, RepoMeta>();
-  const seenQuery = new Set<string>();
-  for (const raw of queries) {
-    const q = (raw ?? "").trim();
-    if (!q || seenQuery.has(q)) continue;
-    seenQuery.add(q);
-    if (seenQuery.size > 4) break; // cap GitHub search calls per request
-    let hits: RepoMeta[] = [];
-    try {
-      hits = await searchRepos(q, token, 8, meta.fullName);
-    } catch {
-      continue; // a bad query should not sink the whole request
-    }
-    for (const h of hits) {
-      const key = h.fullName.toLowerCase();
-      if (!merged.has(key)) merged.set(key, h);
-    }
-    if (merged.size >= 12) break;
+function looksLikeUrl(input: string): boolean {
+  const s = input.trim();
+  if (/^https?:\/\//i.test(s)) return true;
+  return /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s);
+}
+
+function normalizeUrl(input: string): string {
+  const s = input.trim();
+  return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+}
+
+async function fetchSite(input: string): Promise<{ host: string; title: string; text: string }> {
+  const url = normalizeUrl(input);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { "User-Agent": "reporecommender (https://reporecommender.com)", Accept: "text/html" },
+      redirect: "follow",
+    });
+  } catch {
+    throw new Error("Could not reach that website.");
   }
+  if (!res.ok) throw new Error(`Could not fetch that website (${res.status}).`);
+  const html = await res.text();
+  const title = (html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? "").trim();
+  const desc = (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i)?.[1] ?? "").trim();
+  const body = htmlToText(html);
+  const text = [desc, body].filter(Boolean).join("\n").slice(0, 5000);
+  return { host: new URL(url).host.replace(/^www\./, ""), title, text };
+}
 
-  return [...merged.values()].sort((a, b) => b.stars - a.stars).slice(0, 12);
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function clamp(n: number): number {

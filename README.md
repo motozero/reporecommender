@@ -1,7 +1,7 @@
 # Repo Recommender
 
-Point it at a GitHub repo and say what you want next ("auth solution", "background jobs"), and it
-returns repos that genuinely complement yours, each with a short reason it fits and quick ratings.
+Point it at a GitHub repo or a website and say what you want next ("auth solution", "background jobs"),
+and it returns repos that genuinely complement yours, each with a short reason it fits and quick ratings.
 
 Live at reporecommender.com (coming soon). Built in the open with Claude Code.
 
