@@ -1,11 +1,14 @@
 :root {
   --bg: #0b0f10;
   --panel: #131a1c;
+  --panel-2: #182123;
   --ink: #e8f0ee;
   --muted: #8aa0a0;
   --green: #21c08b;
   --accent: #f5d547;
   --line: #223033;
+  --red: #e2566b;
+  --amber: #e6a23c;
 }
 
 * { box-sizing: border-box; }
@@ -15,15 +18,13 @@ body {
   min-height: 100vh;
   background: radial-gradient(1200px 600px at 50% -10%, #102023 0%, var(--bg) 60%);
   color: var(--ink);
-  font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  display: grid;
-  place-items: center;
+  font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 .wrap {
-  width: min(680px, 92vw);
-  padding: 48px 8vw;
-  text-align: center;
+  width: min(900px, 92vw);
+  margin: 0 auto;
+  padding: 48px 0 80px;
 }
 
 .masthead {
@@ -40,7 +41,6 @@ body {
   border: 2px solid var(--green);
   position: relative;
 }
-
 .radar::after {
   content: "";
   position: absolute;
@@ -49,27 +49,115 @@ body {
   background: conic-gradient(from 0deg, transparent 0 280deg, rgba(33, 192, 139, 0.6) 360deg);
 }
 
-h1 {
-  font-size: 30px;
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-
+h1 { font-size: 30px; margin: 0; letter-spacing: -0.02em; }
 .accent { color: var(--green); }
 
 .tagline {
   color: var(--muted);
   font-size: 18px;
-  margin-top: 18px;
+  text-align: center;
+  margin: 16px auto 32px;
+  max-width: 36ch;
 }
 
-.status {
-  margin-top: 28px;
-  display: inline-block;
-  padding: 10px 16px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
+/* Form */
+.finder {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
   background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; color: var(--muted); }
+.field input {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--ink);
+  padding: 11px 12px;
+  font-size: 15px;
+}
+.field input:focus { outline: none; border-color: var(--green); }
+button#submit {
+  background: var(--green);
+  color: #04130d;
+  border: 0;
+  border-radius: 9px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button#submit:disabled { opacity: 0.55; cursor: progress; }
+
+.status {
+  margin: 22px auto 0;
+  text-align: center;
   color: var(--accent);
   font-size: 14px;
+}
+.status.error { color: var(--red); }
+
+/* Source summary */
+.source {
+  margin-top: 28px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.source h2 { font-size: 15px; margin: 0 0 6px; font-weight: 600; }
+.source p { margin: 0; color: var(--muted); font-size: 14px; }
+.source .stack { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+/* Results grid */
+.grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.card .head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.card .rank { font-size: 12px; color: var(--muted); }
+.card .name {
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: none;
+  font-size: 15px;
+  word-break: break-word;
+}
+.card .name:hover { color: var(--green); }
+.card .stars { color: var(--accent); font-size: 13px; white-space: nowrap; }
+.card .lang { font-size: 12px; color: var(--muted); }
+.card .why { font-size: 14px; color: #cdd9d7; margin: 0; }
+
+.ratings { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.rate { display: grid; grid-template-columns: 54px 1fr; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.bar { height: 6px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 4px; }
+
+@media (max-width: 640px) {
+  .finder { grid-template-columns: 1fr; }
 }

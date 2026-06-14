@@ -12,9 +12,26 @@
         <span class="radar" aria-hidden="true"></span>
         <h1>Repo<span class="accent">Recommender</span></h1>
       </header>
-      <p class="tagline">Point it at a repo, tell it what you want next, and get repos that
-        actually complement yours.</p>
-      <p class="status" id="status">Step zero is live. The recommender comes online next.</p>
+      <p class="tagline">Point it at a repo, say what you want next, and get repos that actually
+        complement yours.</p>
+
+      <form id="form" class="finder">
+        <div class="field">
+          <label for="repoUrl">Your repo</label>
+          <input id="repoUrl" name="repoUrl" type="text" autocomplete="off"
+            placeholder="github.com/owner/repo  or  owner/repo" required />
+        </div>
+        <div class="field">
+          <label for="goal">What do you want to add or improve?</label>
+          <input id="goal" name="goal" type="text" autocomplete="off"
+            placeholder="background jobs, auth, deploy tooling" required maxlength="300" />
+        </div>
+        <button id="submit" type="submit">Find complements</button>
+      </form>
+
+      <p id="status" class="status" hidden></p>
+      <section id="source" class="source" hidden></section>
+      <section id="results" class="grid" aria-live="polite"></section>
     </main>
     <script src="/app.js"></script>
   </body>
