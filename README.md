@@ -48,7 +48,7 @@ features get used. Index below; more land as the build proceeds.
 [PRD and plan mode](./lessons/03-prd-and-plan-mode.md); permissions and safe autonomy.
 
 **Build it:** Cloudflare step zero; [`claude init` and CLAUDE.md](./lessons/06-claude-init-and-claude-md.md);
-custom skills; integrations and MCP; context window management;
+custom skills; [integrations and MCP](./lessons/08-integrations-and-mcp.md); context window management;
 [model tiering](./lessons/10-model-tiering-and-cost.md) with tokens, pricing, and
 latency; subagents; [hooks](./lessons/12-hooks.md); git and worktrees;
 [secrets and key management](./lessons/14-secrets-and-keys.md).
