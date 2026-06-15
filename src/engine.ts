@@ -176,9 +176,30 @@ async function gatherCandidates(
   goal: string,
   token?: string,
 ): Promise<RepoMeta[]> {
-  const lang = ctx.langHint ? `language:${ctx.langHint}` : "";
+  // Constrain searches to the source's ecosystem so GitHub returns complements a
+  // developer on this stack can actually install. A TypeScript app cannot
+  // `npm install` a Rust crate.
+  const allowed = ecosystemLanguages(ctx.langHint);
+  const ecoLangs = allowed ? [...allowed] : [];
   const goalWords = goal.replace(/[^\w\s]/g, " ").trim();
-  const queries = [...ctx.searchQueries.slice(0, 3), [goalWords, lang].filter(Boolean).join(" "), goalWords];
+
+  // Goal searches, one per ecosystem language, so the canonical tools for each
+  // language in the stack surface. The JS/TS ecosystem spans two GitHub language
+  // tags, so a TypeScript project searches both: a single `language:` would drop
+  // the other half (e.g. zustand is tagged TypeScript, next-auth too, while many
+  // older libs are tagged JavaScript). An unknown source language (a website)
+  // falls back to one bare query.
+  const goalQueries = ecoLangs.length ? ecoLangs.map((l) => `${goalWords} language:"${l}"`) : [goalWords];
+
+  // Keyword searches from the analysis step. We only narrow these by language
+  // for a single-language ecosystem; for JS/TS we leave them broad and let the
+  // post-filter below remove any off-ecosystem strays.
+  const singleLangQ = allowed && allowed.size === 1 && ctx.langHint ? `language:"${ctx.langHint}"` : "";
+  const keywordQueries = ctx.searchQueries.slice(0, 3).map((q) => [q, singleLangQ].filter(Boolean).join(" "));
+
+  // Keyword queries first (the analysis step's canonical terms are the strongest
+  // signal), then the per-language goal queries to round out ecosystem coverage.
+  const queries = [...keywordQueries, ...goalQueries];
 
   const merged = new Map<string, RepoMeta>();
   const seenQuery = new Set<string>();
@@ -186,7 +207,7 @@ async function gatherCandidates(
     const q = (raw ?? "").trim();
     if (!q || seenQuery.has(q)) continue;
     seenQuery.add(q);
-    if (seenQuery.size > 4) break; // cap GitHub search calls per request
+    if (seenQuery.size > 6) break; // cap GitHub search calls per request
     let hits: RepoMeta[] = [];
     try {
       hits = await searchRepos(q, token, 8, ctx.exclude);
@@ -197,10 +218,43 @@ async function gatherCandidates(
       const k = h.fullName.toLowerCase();
       if (!merged.has(k)) merged.set(k, h);
     }
-    if (merged.size >= 12) break;
+    // No early break on pool size: we want every query (within the call cap) to
+    // contribute, then rank the union by stars. Front-loaded queries used to
+    // starve later ones that were finding the canonical complements.
   }
 
-  return [...merged.values()].sort((a, b) => b.stars - a.stars).slice(0, 12);
+  // Safety net: drop anything left outside the source's ecosystem (broad keyword
+  // searches can still pull in off-language repos). Keep the filter only if it
+  // leaves a usable pool, so a valid request never goes empty.
+  const pool = [...merged.values()];
+  const inEco = allowed ? pool.filter((r) => r.language && allowed.has(r.language.toLowerCase())) : pool;
+  const finalPool = inEco.length >= 3 ? inEco : pool;
+
+  return finalPool.sort((a, b) => b.stars - a.stars).slice(0, 12);
+}
+
+// Languages whose tools can realistically be used together. A complement only
+// counts if a developer on the source stack can actually adopt it. Returns null
+// for an unknown source language (e.g. a website), which means no constraint.
+function ecosystemLanguages(lang?: string | null): Set<string> | null {
+  if (!lang) return null;
+  const l = lang.toLowerCase();
+  const groups: string[][] = [
+    ["typescript", "javascript"],
+    ["python"],
+    ["go"],
+    ["rust"],
+    ["ruby"],
+    ["java", "kotlin", "scala"],
+    ["c#", "f#"],
+    ["php"],
+    ["c++", "c"],
+    ["swift", "objective-c"],
+    ["elixir", "erlang"],
+    ["dart"],
+  ];
+  const group = groups.find((g) => g.includes(l));
+  return new Set(group ?? [l]);
 }
 
 // Step 3: rank and write the per-repo rationale + ratings with Sonnet.
