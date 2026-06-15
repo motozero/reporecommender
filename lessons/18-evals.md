@@ -81,9 +81,12 @@ differently across runs. `django-realtime` flipped between 100 and 0 percent on 
 identical code, because its one acceptable repo either surfaced or did not. With one trial per case the
 aggregate recall wobbled between 57 and 71 percent for the same engine. The fixes that are real survive
 the wobble: the leak is gone in every run (a deterministic structural fact), and `hono-auth` passes in
-every run. The lesson is to read evals like measurements with error bars. The next iteration of this
-harness would run each case several times and report the mean, which is how you tell a real gain from a
-lucky run.
+every run. The lesson is to read evals like measurements with error bars. So the harness grew a
+`--trials N` flag: it runs each case N times and reports the mean plus the per-trial spread, which is
+how you tell a real gain from a lucky run. With three trials the scorecard prints recall like
+`67% [100,100,0]`, and the noisy single-concept cases (`django-realtime`, and it turns out `fastapi-jobs`
+too) show their wobble plainly while the solid cases read `[100,100,100]`. Each trial is cached
+separately, so re-scoring is still free.
 
 **Why this is the high-value work.** The structural scorers protect the contract for free. Recall turns
 "the recommender feels weaker on vague goals" into a tracked number with named failing cases. The judge

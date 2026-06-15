@@ -4,10 +4,16 @@
 //   npm run eval              run all cases (uses cached engine results if present)
 //   npm run eval -- --fresh   ignore the cache and call the engine again
 //   npm run eval -- --no-judge   skip the LLM-judge scorer (free + offline)
+//   npm run eval -- --trials 3   run each case 3 times and report the mean recall
 //   npm run eval -- --ci      exit non-zero if a metric falls below threshold
 //
 // Engine results are cached under evals/.cache so re-running to iterate on
 // scorers or the scorecard costs nothing. Pass --fresh after changing a prompt.
+//
+// The engine runs at temperature 0.2, so a single run of a case is one sample
+// from a distribution, not a fact (see lessons/18-evals.md). --trials N runs each
+// case N times and reports the mean, which is how you tell a real gain from a
+// lucky run. Each trial is cached separately, so re-scoring N trials is free.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -30,6 +36,16 @@ const argv = process.argv.slice(2);
 const FRESH = argv.includes("--fresh");
 const NO_JUDGE = argv.includes("--no-judge");
 const CI = argv.includes("--ci");
+const TRIALS = parseTrials(argv);
+
+// --trials=N or --trials N, defaulting to 1. Clamped to at least 1.
+function parseTrials(args: string[]): number {
+  const eq = args.find((a) => a.startsWith("--trials="));
+  if (eq) return Math.max(1, parseInt(eq.slice("--trials=".length), 10) || 1);
+  const i = args.indexOf("--trials");
+  if (i >= 0 && args[i + 1] && /^\d+$/.test(args[i + 1]!)) return Math.max(1, parseInt(args[i + 1]!, 10));
+  return 1;
+}
 
 // Pass marks: structural is a hard contract; recall and judge are quality bars
 // we want to raise over time. --ci enforces them.
@@ -39,9 +55,11 @@ interface CaseReport {
   id: string;
   note?: string;
   error?: string;
-  structural: number;
-  recall: Score & { covered: number; total: number };
-  judge?: Score;
+  structural: number; // mean across trials
+  recall: Score & { covered: number; total: number }; // score is the mean; covered/total/detail from the worst trial
+  judge?: Score; // mean
+  trials: number;
+  recallRuns: number[]; // per-trial recall in 0..1, for the spread display
 }
 
 function loadEnv(): { ANTHROPIC_API_KEY: string; GITHUB_TOKEN?: string } {
@@ -71,10 +89,16 @@ function loadCases(): EvalCase[] {
     .map((l) => JSON.parse(l) as EvalCase);
 }
 
-// Cache the engine result per case so iterating on scorers is free. Keyed by
-// input+goal so editing a case invalidates its cache automatically.
-function cached(c: EvalCase): RecommendResult | null {
-  const f = join(CACHE, `${c.id}.json`);
+// Cache the engine result per case+trial so iterating on scorers is free. Keyed
+// by input+goal so editing a case invalidates its cache automatically. Trial 0
+// uses the plain `<id>.json` name (backward compatible with single-run caches);
+// extra trials get `<id>.t<n>.json`.
+function cacheFile(c: EvalCase, trial: number): string {
+  return join(CACHE, trial === 0 ? `${c.id}.json` : `${c.id}.t${trial}.json`);
+}
+
+function cached(c: EvalCase, trial: number): RecommendResult | null {
+  const f = cacheFile(c, trial);
   if (FRESH || !existsSync(f)) return null;
   try {
     const blob = JSON.parse(readFileSync(f, "utf8"));
@@ -85,9 +109,9 @@ function cached(c: EvalCase): RecommendResult | null {
   return null;
 }
 
-function save(c: EvalCase, result: RecommendResult): void {
+function save(c: EvalCase, trial: number, result: RecommendResult): void {
   if (!existsSync(CACHE)) mkdirSync(CACHE, { recursive: true });
-  writeFileSync(join(CACHE, `${c.id}.json`), JSON.stringify({ input: c.input, goal: c.goal, result }, null, 2));
+  writeFileSync(cacheFile(c, trial), JSON.stringify({ input: c.input, goal: c.goal, result }, null, 2));
 }
 
 function avg(ns: number[]): number {
@@ -98,42 +122,71 @@ const pct = (n: number): string => `${Math.round(n * 100)}%`.padStart(4);
 
 async function runCase(c: EvalCase, env: ReturnType<typeof loadEnv>): Promise<CaseReport> {
   process.stdout.write(`  ${c.id.padEnd(20)} `);
-  let result = cached(c);
-  const fromCache = result !== null;
-  try {
-    if (!result) {
-      result = await recommend(c.input, c.goal, env);
-      save(c, result);
+  const structurals: number[] = [];
+  const recalls: (Score & { covered: number; total: number })[] = [];
+  const judges: number[] = [];
+  let live = 0;
+  let lastError = "";
+
+  for (let t = 0; t < TRIALS; t++) {
+    let result = cached(c, t);
+    try {
+      if (!result) {
+        result = await recommend(c.input, c.goal, env);
+        save(c, t, result);
+        live++;
+      }
+    } catch (err) {
+      // A failed trial scores zero and does not sink the others.
+      lastError = err instanceof Error ? err.message : String(err);
+      structurals.push(0);
+      recalls.push({ score: 0, covered: 0, total: c.concepts.length, detail: "engine threw" });
+      if (!NO_JUDGE) judges.push(0);
+      continue;
     }
-  } catch (err) {
-    console.log("ERROR");
-    return {
-      id: c.id,
-      note: c.note,
-      error: err instanceof Error ? err.message : String(err),
-      structural: 0,
-      recall: { score: 0, covered: 0, total: c.concepts.length, detail: "engine threw" },
-    };
+    structurals.push(avg(STRUCTURAL.map((s) => s(c, result!).score)));
+    recalls.push(recall(c, result));
+    if (!NO_JUDGE) judges.push((await judgeFit(c, result, env.ANTHROPIC_API_KEY)).score);
   }
 
-  const structural = avg(STRUCTURAL.map((s) => s(c, result!).score));
-  const rec = recall(c, result);
-  const judge = NO_JUDGE ? undefined : await judgeFit(c, result, env.ANTHROPIC_API_KEY);
+  const structural = avg(structurals);
+  const meanRecall = avg(recalls.map((r) => r.score));
+  // Show the worst trial's missed concepts in the details section.
+  const worst = recalls.reduce((a, b) => (b.score < a.score ? b : a));
+  const recallRuns = recalls.map((r) => r.score);
+  const judge: Score | undefined = NO_JUDGE ? undefined : { score: avg(judges), detail: `avg fit ${(avg(judges) * 4 + 1).toFixed(1)}/5` };
+  const error = lastError && recalls.every((r) => r.detail === "engine threw") ? lastError : undefined;
 
+  const tag = TRIALS > 1 ? `${live}/${TRIALS} live` : live ? "live  " : "cached";
+  const spread = TRIALS > 1 ? ` [${recallRuns.map((s) => Math.round(s * 100)).join(",")}]` : "";
   console.log(
-    `${fromCache ? "cached" : "live  "}  struct ${pct(structural)}  recall ${pct(rec.score)}` +
-      (judge ? `  judge ${pct(judge.score)}` : ""),
+    `${tag}  struct ${pct(structural)}  recall ${pct(meanRecall)}${spread}` + (judge ? `  judge ${pct(judge.score)}` : ""),
   );
-  return { id: c.id, note: c.note, structural, recall: rec, judge };
+
+  return {
+    id: c.id,
+    note: c.note,
+    error,
+    structural,
+    recall: { ...worst, score: meanRecall },
+    judge,
+    trials: TRIALS,
+    recallRuns,
+  };
 }
 
 function printScorecard(reports: CaseReport[]): void {
   const line = "-".repeat(72);
   console.log(`\n${line}\n  SCORECARD\n${line}`);
-  console.log(`  ${"case".padEnd(20)} ${"struct".padEnd(7)} ${"recall".padEnd(14)} judge`);
-  console.log(`  ${"-".repeat(20)} ${"-".repeat(7)} ${"-".repeat(14)} ${"-".repeat(11)}`);
+  const recallHead = reports[0]?.trials && reports[0].trials > 1 ? "recall (per trial)" : "recall";
+  console.log(`  ${"case".padEnd(20)} ${"struct".padEnd(7)} ${recallHead.padEnd(20)} judge`);
+  console.log(`  ${"-".repeat(20)} ${"-".repeat(7)} ${"-".repeat(20)} ${"-".repeat(11)}`);
   for (const r of reports) {
-    const recallCol = `${pct(r.recall.score)} (${r.recall.covered}/${r.recall.total})`.padEnd(14);
+    const recallCol = (
+      r.trials > 1
+        ? `${pct(r.recall.score)} [${r.recallRuns.map((s) => Math.round(s * 100)).join(",")}]`
+        : `${pct(r.recall.score)} (${r.recall.covered}/${r.recall.total})`
+    ).padEnd(20);
     const judgeCol = r.judge ? r.judge.detail : "skipped";
     console.log(`  ${r.id.padEnd(20)} ${pct(r.structural).padEnd(7)} ${recallCol} ${judgeCol}`);
   }
@@ -177,7 +230,8 @@ function printScorecard(reports: CaseReport[]): void {
 async function main() {
   const env = loadEnv();
   const cases = loadCases();
-  console.log(`\nRunning ${cases.length} eval cases${FRESH ? " (fresh)" : ""}${NO_JUDGE ? " (no judge)" : ""}:\n`);
+  const trialsNote = TRIALS > 1 ? ` x ${TRIALS} trials` : "";
+  console.log(`\nRunning ${cases.length} eval cases${trialsNote}${FRESH ? " (fresh)" : ""}${NO_JUDGE ? " (no judge)" : ""}:\n`);
   const reports: CaseReport[] = [];
   for (const c of cases) reports.push(await runCase(c, env)); // sequential keeps logs readable and rate limits happy
   printScorecard(reports);
