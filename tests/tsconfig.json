@@ -1,0 +1,11 @@
+{
+  // Tests run under Node (not the Worker runtime), so they get Node types and may
+  // import source with .ts extensions. Mirrors evals/tsconfig.json.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["**/*.ts"]
+}

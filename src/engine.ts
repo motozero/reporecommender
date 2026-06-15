@@ -236,7 +236,7 @@ async function gatherCandidates(
 // Languages whose tools can realistically be used together. A complement only
 // counts if a developer on the source stack can actually adopt it. Returns null
 // for an unknown source language (e.g. a website), which means no constraint.
-function ecosystemLanguages(lang?: string | null): Set<string> | null {
+export function ecosystemLanguages(lang?: string | null): Set<string> | null {
   if (!lang) return null;
   const l = lang.toLowerCase();
   const groups: string[][] = [
@@ -348,13 +348,13 @@ async function enrichMetrics(recs: Recommendation[], token?: string): Promise<vo
 
 // Website helpers.
 
-function looksLikeUrl(input: string): boolean {
+export function looksLikeUrl(input: string): boolean {
   const s = input.trim();
   if (/^https?:\/\//i.test(s)) return true;
   return /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s);
 }
 
-function normalizeUrl(input: string): string {
+export function normalizeUrl(input: string): string {
   const s = input.trim();
   return /^https?:\/\//i.test(s) ? s : `https://${s}`;
 }
@@ -379,7 +379,7 @@ async function fetchSite(input: string): Promise<{ host: string; title: string; 
   return { host: new URL(url).host.replace(/^www\./, ""), title, text };
 }
 
-function htmlToText(html: string): string {
+export function htmlToText(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -392,7 +392,7 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-function clamp(n: number): number {
+export function clamp(n: number): number {
   if (typeof n !== "number" || Number.isNaN(n)) return 3;
   return Math.max(1, Math.min(5, Math.round(n)));
 }
