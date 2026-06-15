@@ -11,7 +11,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { parseRepo } from "../src/github.ts";
 import { extractJson } from "../src/claude.ts";
-import { looksLikeUrl, normalizeUrl, htmlToText, clamp, ecosystemLanguages } from "../src/engine.ts";
+import { looksLikeUrl, normalizeUrl, htmlToText, clamp, ecosystemLanguages, looksLikeNonTool } from "../src/engine.ts";
 
 describe("parseRepo", () => {
   it("parses a full GitHub URL", () => {
@@ -88,6 +88,40 @@ describe("ecosystemLanguages", () => {
     assert.equal(ecosystemLanguages(null), null);
     assert.equal(ecosystemLanguages(undefined), null);
     assert.equal(ecosystemLanguages(""), null);
+  });
+});
+
+describe("looksLikeNonTool", () => {
+  // Guards the canonical-ranking fix: star-sorted search floats learning material
+  // and lists to the top (an interview-questions repo can outrank a real tool), so
+  // we drop them before ranking. Must catch the junk without flagging real tools.
+  it("flags learning material and curated lists", () => {
+    const junk = [
+      { fullName: "h5bp/Front-end-Developer-Interview-Questions", description: "A list of helpful questions" },
+      { fullName: "sindresorhus/awesome", description: "Awesome lists about all kinds of topics" },
+      { fullName: "goldbergyoni/javascript-testing-best-practices", description: "best practices" },
+      { fullName: "SimulatedGREG/electron-vue", description: "An Electron and Vue.js quick start boilerplate" },
+      { fullName: "someone/react-tutorial", description: "Learn React step by step" },
+      { fullName: "user/python-cheatsheet", description: "Comprehensive Python cheatsheet" },
+    ];
+    for (const r of junk) assert.equal(looksLikeNonTool(r), true, r.fullName);
+  });
+
+  it("does not flag real tools", () => {
+    // High-precision matters: a false positive silently drops a correct answer.
+    const tools = [
+      { fullName: "celery/celery", description: "Distributed Task Queue" },
+      { fullName: "microsoft/playwright", description: "A framework for Web Testing and Automation" },
+      { fullName: "sqlalchemy/sqlalchemy", description: "The Database Toolkit for Python" },
+      { fullName: "pmndrs/zustand", description: "Bear necessities for state management in React" },
+      { fullName: "huggingface/transformers", description: "State-of-the-art Machine Learning library" },
+    ];
+    for (const r of tools) assert.equal(looksLikeNonTool(r), false, r.fullName);
+  });
+
+  it("tolerates a missing description", () => {
+    assert.equal(looksLikeNonTool({ fullName: "owner/some-tool" }), false);
+    assert.equal(looksLikeNonTool({ fullName: "owner/awesome-go", description: null }), true);
   });
 });
 

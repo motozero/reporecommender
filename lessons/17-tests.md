@@ -1,8 +1,8 @@
 # Lesson 17: owning your tests
 
-**What it is.** A unit test suite for the engine's deterministic logic. `npm test` runs 28 tests across
-six areas (repo parsing, ecosystem grouping, JSON extraction, rating clamping, input classification,
-HTML to text) in about 60 milliseconds, with no Anthropic or GitHub calls.
+**What it is.** A unit test suite for the engine's deterministic logic. `npm test` runs 31 tests across
+seven areas (repo parsing, ecosystem grouping, non-tool filtering, JSON extraction, rating clamping,
+input classification, HTML to text) in about 60 milliseconds, with no Anthropic or GitHub calls.
 
 **The dividing line that matters.** This engine is two things bolted together: deterministic plumbing
 and model judgment. Each needs a different kind of test, and using the wrong one is the classic mistake.

@@ -90,8 +90,25 @@ lucky run.
 adds a quality read no assertion could. Together they make a fuzzy product measurable, which is the
 prerequisite for improving it on purpose instead of by vibe. The leak fix above is the proof: a vague
 feeling ("it recommends weird things sometimes") became a named failing case, a root cause, a fix, and a
-verified green run. What is still red is honest: `flask-orm` and the Svelte case surface satellites and
-tutorials instead of the canonical library, which is the next item the scorecard hands us.
+verified green run.
+
+**The loop again: canonical ranking.** The next red cases were `flask-orm` and the Svelte case, which
+surfaced satellites and tutorials instead of canonical tools. Looking at the raw GitHub results
+explained why: searching the goal as a literal phrase ("end to end testing") returns whatever repos
+contain those exact words, and a 60,000-star interview-questions list outranks Playwright, which does
+not put that phrase in its description. So star-sorted search was being poisoned by non-tools, and the
+ranker was over-favouring niche framework-specific repos. The fix was two parts: a deterministic filter
+that drops learning material and lists (`looksLikeNonTool`, unit-tested in lesson 17), and a curation
+nudge telling the model to prefer established, widely adopted tools over tutorials. Re-running, the
+Svelte case went from recommending tutorials to leading with TestCafe and Nightwatch, and aggregate
+recall moved to 86 to 100 percent across runs.
+
+That re-run also exposed two of our own labels as too strict, the same `express-validator` lesson
+again: `flask-sqlalchemy` is the idiomatic Flask ORM (not a lesser answer than raw SQLAlchemy), and any
+established e2e framework is a correct answer, not only Playwright and Cypress. We widened those
+concepts. The discipline is the same as before: we widen a label only when a domain expert would call
+the surfaced answer genuinely correct, never just to turn a cell green. `django-realtime` stays the
+honest hard case, its single acceptable repo flips with the temperature noise.
 
 **Gotchas.**
 

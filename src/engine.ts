@@ -223,12 +223,17 @@ async function gatherCandidates(
     // starve later ones that were finding the canonical complements.
   }
 
-  // Safety net: drop anything left outside the source's ecosystem (broad keyword
-  // searches can still pull in off-language repos). Keep the filter only if it
-  // leaves a usable pool, so a valid request never goes empty.
+  // Two safety nets, each kept only if it leaves a usable pool so a valid request
+  // never goes empty:
+  //   1. ecosystem: drop off-language repos (broad searches pull them in).
+  //   2. non-tool: drop learning material and lists. Star-sorted search floats
+  //      these to the top (an interview-questions repo can have 60k stars) and
+  //      they are never a real complement to ship.
   const pool = [...merged.values()];
   const inEco = allowed ? pool.filter((r) => r.language && allowed.has(r.language.toLowerCase())) : pool;
-  const finalPool = inEco.length >= 3 ? inEco : pool;
+  const ecoPool = inEco.length >= 3 ? inEco : pool;
+  const tools = ecoPool.filter((r) => !looksLikeNonTool(r));
+  const finalPool = tools.length >= 3 ? tools : ecoPool;
 
   return finalPool.sort((a, b) => b.stars - a.stars).slice(0, 12);
 }
@@ -257,6 +262,18 @@ export function ecosystemLanguages(lang?: string | null): Set<string> | null {
   return new Set(group ?? [l]);
 }
 
+// Repos that are learning material or curated lists, not installable tools. They
+// pollute star-sorted search results and are never a genuine complement. Matched
+// on the repo name and description, using high-precision terms only so we do not
+// drop real tools (e.g. no bare "examples" or "learning", which appear in many
+// legitimate tool descriptions).
+const NON_TOOL_PATTERN =
+  /\b(awesome|interview|tutorials?|boilerplates?|starter[\s-]?kits?|cheat[\s-]?sheets?|best[\s-]?practices?|roadmaps?|cookbooks?|handbooks?|study[\s-]?guides?|curated[\s-]?lists?)\b/i;
+
+export function looksLikeNonTool(meta: { fullName: string; description?: string | null }): boolean {
+  return NON_TOOL_PATTERN.test(`${meta.fullName} ${meta.description ?? ""}`);
+}
+
 // Step 3: rank and write the per-repo rationale + ratings with Sonnet.
 async function curate(
   ctx: SourceContext,
@@ -269,6 +286,10 @@ async function curate(
     .join("\n");
   const system = [
     "You are a precise engineering advisor. Recommend repos that genuinely complement the project.",
+    "Prefer established, widely adopted, actively maintained tools; treat the star count as a signal of",
+    "adoption. Recommend the real tool a developer would install, never a tutorial, example, boilerplate,",
+    "or list. A popular general-purpose tool usually beats a niche framework-specific wrapper unless the",
+    "wrapper is clearly the better fit for this exact stack.",
     "Write in a direct, concrete style. No em dashes. No marketing language.",
     "Return strict JSON only, no prose, no code fences.",
   ].join(" ");
