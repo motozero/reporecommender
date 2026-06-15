@@ -50,18 +50,22 @@ npm run dev                     # http://localhost:8787
 A two-week curriculum that teaches Claude Code through the real build. Lessons are written as the
 features get used. Index below; more land as the build proceeds.
 
-**Before we build:** [what we built and what we are building](./lessons/01-what-we-built.md); the
-Claude toolkit and product map;
-[PRD and plan mode](./lessons/03-prd-and-plan-mode.md); permissions and safe autonomy.
+**Before we build:** [what we built and what we are building](./lessons/01-what-we-built.md);
+[the Claude toolkit and product map](./lessons/02-product-map.md);
+[PRD and plan mode](./lessons/03-prd-and-plan-mode.md);
+[permissions and safe autonomy](./lessons/04-permissions.md).
 
-**Build it:** Cloudflare step zero; [`claude init` and CLAUDE.md](./lessons/06-claude-init-and-claude-md.md);
+**Build it:** [Cloudflare step zero](./lessons/05-cloudflare-step-zero.md);
+[`claude init` and CLAUDE.md](./lessons/06-claude-init-and-claude-md.md);
 [custom skills](./lessons/07-custom-skills.md); [integrations and MCP](./lessons/08-integrations-and-mcp.md);
-context window management;
+[context window management](./lessons/09-context-window.md);
 [model tiering](./lessons/10-model-tiering-and-cost.md) with tokens, pricing, and
-latency; subagents; [hooks](./lessons/12-hooks.md); [git and worktrees](./lessons/13-git-and-worktrees.md);
+latency; [subagents](./lessons/11-subagents.md); [hooks](./lessons/12-hooks.md);
+[git and worktrees](./lessons/13-git-and-worktrees.md);
 [secrets and key management](./lessons/14-secrets-and-keys.md).
 
-**Team and quality:** working with others; [debugging](./lessons/16-debugging.md);
+**Team and quality:** [working with others](./lessons/15-working-with-others.md);
+[debugging](./lessons/16-debugging.md);
 [owning your tests](./lessons/17-tests.md); [running evals](./lessons/18-evals.md);
 [deploy](./lessons/19-deploy.md).
 
