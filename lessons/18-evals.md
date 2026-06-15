@@ -60,12 +60,38 @@ genuinely mislabelled (`express-validator` really is the right answer; omitting 
 left `hono-auth`, `flask-orm`, and the Svelte case failing, because those are real gaps that should
 show red. Recall went from 43 to 57 percent, honestly.
 
+**The loop in action: fixing the ecosystem leak.** The scorecard named the next move, so we took it.
+The root cause of `hono-auth` was that the GitHub keyword searches ran with no language qualifier, so
+the top-starred results were spread across every language. The fix constrains searches and candidates
+to the source's ecosystem (a TypeScript app searches TypeScript and JavaScript, a Flask app searches
+Python), with a post-filter as a safety net. Re-running told the honest story at each step:
+
+- First attempt fixed `flask-orm` but regressed `react-state` to zero. React is tagged JavaScript on
+  GitHub while the canonical state libraries (zustand, redux) are tagged TypeScript, so a single
+  `language:JavaScript` qualifier excluded them. The eval caught the regression on the next run.
+- The corrected version searches the goal once per ecosystem language. That fixed `hono-auth`
+  (0 to 100 percent, and it now returns a full set instead of two thin picks) and held the cases that
+  were already passing.
+
+That sequence, change then measure then change again, is the entire point. Without the harness the
+React regression ships silently.
+
+**A number is a distribution, not a fact.** The engine runs at temperature 0.2, so the same case scores
+differently across runs. `django-realtime` flipped between 100 and 0 percent on back-to-back runs of
+identical code, because its one acceptable repo either surfaced or did not. With one trial per case the
+aggregate recall wobbled between 57 and 71 percent for the same engine. The fixes that are real survive
+the wobble: the leak is gone in every run (a deterministic structural fact), and `hono-auth` passes in
+every run. The lesson is to read evals like measurements with error bars. The next iteration of this
+harness would run each case several times and report the mean, which is how you tell a real gain from a
+lucky run.
+
 **Why this is the high-value work.** The structural scorers protect the contract for free. Recall turns
 "the recommender feels weaker on vague goals" into a tracked number with named failing cases. The judge
 adds a quality read no assertion could. Together they make a fuzzy product measurable, which is the
-prerequisite for improving it on purpose instead of by vibe. The next move is clear from the scorecard:
-constrain candidates to the source ecosystem (fixes `hono-auth`), and make sure the canonical library
-outranks its satellites (fixes `flask-orm`). Re-run, and the harness tells you whether it worked.
+prerequisite for improving it on purpose instead of by vibe. The leak fix above is the proof: a vague
+feeling ("it recommends weird things sometimes") became a named failing case, a root cause, a fix, and a
+verified green run. What is still red is honest: `flask-orm` and the Svelte case surface satellites and
+tutorials instead of the canonical library, which is the next item the scorecard hands us.
 
 **Gotchas.**
 
