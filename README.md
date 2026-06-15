@@ -62,7 +62,7 @@ latency; subagents; [hooks](./lessons/12-hooks.md); [git and worktrees](./lesson
 [secrets and key management](./lessons/14-secrets-and-keys.md).
 
 **Team and quality:** working with others; [debugging](./lessons/16-debugging.md); owning your tests;
-running evals; [deploy](./lessons/19-deploy.md).
+[running evals](./lessons/18-evals.md); [deploy](./lessons/19-deploy.md).
 
 ## Built with Claude Code
 

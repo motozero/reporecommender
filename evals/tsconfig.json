@@ -1,0 +1,12 @@
+{
+  // The eval harness runs under Node (not the Worker runtime), so it gets Node
+  // types instead of @cloudflare/workers-types, and may import with .ts
+  // extensions (Node's native TypeScript loader requires explicit extensions).
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["**/*.ts"]
+}
