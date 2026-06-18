@@ -18,6 +18,7 @@ export interface ChatEnv {
 
 const vid8 = (id: string) => (id || "anon").slice(0, 8);
 const now = () => new Date().toISOString();
+const clip = (s: string, n = 700): string => (s.length > n ? s.slice(0, n) + " ..." : s);
 
 // POST /api/event - a visitor clicked a recommended repo (or similar).
 export async function handleEvent(request: Request, env: ChatEnv, ctx: ExecutionContext): Promise<Response> {
@@ -136,23 +137,21 @@ export async function handleChat(request: Request, env: ChatEnv, ctx: ExecutionC
 
   await insertMessage(env, sessionId, "assistant", reply);
 
-  if (isNew) {
-    const link = `https://reporecommender.com/c/${sessionId}`;
-    ctx.waitUntil(
-      notify(
-        env,
-        [
-          "💬 <b>New chat with a repo</b>",
-          `${tgEsc(vid8(vId))} is chatting with ${tgEsc(repo)}`,
-          input ? `Building: ${tgEsc(input)}${goal ? " / " + tgEsc(goal) : ""}` : "",
-          `${tgEsc(locationLine(v))} · ${tgEsc(v.browser)}/${tgEsc(v.os)}`,
-          `Transcript: ${link}`,
-        ]
-          .filter(Boolean)
-          .join("\n"),
-      ),
-    );
-  }
+  // Ping Telegram on every turn, so a conversation (or a jailbreak attempt) can
+  // be watched live. The first turn carries the full visitor context; follow-up
+  // turns are compact. Each ping shows what was asked and how the AI answered.
+  const link = `https://reporecommender.com/c/${sessionId}`;
+  const header = isNew
+    ? [
+        "💬 <b>New chat with a repo</b>",
+        `${tgEsc(vid8(vId))} · ${tgEsc(repo)}`,
+        input ? `Building: ${tgEsc(input)}${goal ? " / " + tgEsc(goal) : ""}` : "",
+        `${tgEsc(locationLine(v))} · ${tgEsc(v.browser)}/${tgEsc(v.os)}`,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : `💬 <b>${tgEsc(repo)}</b> · ${tgEsc(vid8(vId))}`;
+  ctx.waitUntil(notify(env, [header, "", `🧑 ${tgEsc(clip(message))}`, `🤖 ${tgEsc(clip(reply))}`, link].join("\n")));
 
   return Response.json({ reply });
 }
