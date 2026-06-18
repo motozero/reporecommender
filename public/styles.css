@@ -83,34 +83,26 @@ body {
   margin: 0 auto 14px;
 }
 .hero h1 {
-  font-size: clamp(27px, 5vw, 38px);
-  line-height: 1.2;
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1.15;
   margin: 0 auto;
-  max-width: 26ch;
-  letter-spacing: -0.01em;
-  word-spacing: 0.4em;
+  max-width: 24ch;
+  letter-spacing: -0.02em;
 }
 .subtitle {
-  color: var(--ink);
-  font-size: 18px;
-  font-weight: 500;
+  color: #cdd9d7;
+  font-size: 17px;
   text-align: center;
-  margin: 22px auto 0;
-  max-width: 50ch;
+  margin: 14px auto 0;
+  max-width: 56ch;
 }
-.pitch {
+.signals {
+  margin: 16px auto 0;
+  text-align: center;
+  font-size: 12.5px;
   color: var(--muted);
-  font-size: 16px;
-  text-align: center;
-  margin: 22px auto 0;
-  max-width: 62ch;
-}
-.hero-tag {
-  color: var(--green);
-  font-size: 15px;
-  font-weight: 600;
-  text-align: center;
-  margin: 22px auto 0;
+  max-width: 64ch;
+  line-height: 1.8;
 }
 
 /* Form */
