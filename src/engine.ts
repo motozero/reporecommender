@@ -233,7 +233,10 @@ async function gatherCandidates(
   const inEco = allowed ? pool.filter((r) => r.language && allowed.has(r.language.toLowerCase())) : pool;
   const ecoPool = inEco.length >= 3 ? inEco : pool;
   const tools = ecoPool.filter((r) => !looksLikeNonTool(r));
-  const finalPool = tools.length >= 3 ? tools : ecoPool;
+  const usable = tools.length >= 3 ? tools : ecoPool;
+  //   3. archived: drop read-only / abandoned repos when fresher ones remain.
+  const live = usable.filter((r) => !r.archived);
+  const finalPool = live.length >= 3 ? live : usable;
 
   return finalPool.sort((a, b) => b.stars - a.stars).slice(0, 12);
 }
@@ -282,12 +285,15 @@ async function curate(
   apiKey: string,
 ): Promise<Recommendation[]> {
   const list = candidates
-    .map((c, i) => `${i + 1}. ${c.fullName} | ${c.stars} stars | ${c.language ?? "?"} | ${c.description ?? ""}`)
+    .map((c, i) => `${i + 1}. ${c.fullName} | ${c.stars} stars | ${c.language ?? "?"} | updated ${relativeAge(c.pushedAt)} | ${c.description ?? ""}`)
     .join("\n");
   const system = [
     "You are a precise engineering advisor. Recommend repos that genuinely complement the project.",
     "Prefer established, widely adopted, actively maintained tools; treat the star count as a signal of",
-    "adoption. Recommend the real tool a developer would install, never a tutorial, example, boilerplate,",
+    "adoption. Treat the last update as a maintenance signal: do not recommend an abandoned or",
+    "unmaintained repo (not updated in about two years or more) when a fresher equivalent is in the list.",
+    "If the best available option is dated, recommend it but say it is dated in the why.",
+    "Recommend the real tool a developer would install, never a tutorial, example, boilerplate,",
     "or list. A popular general-purpose tool usually beats a niche framework-specific wrapper unless the",
     "wrapper is clearly the better fit for this exact stack.",
     "Write in a direct, concrete style. No em dashes. No marketing language.",
@@ -416,4 +422,14 @@ export function htmlToText(html: string): string {
 export function clamp(n: number): number {
   if (typeof n !== "number" || Number.isNaN(n)) return 3;
   return Math.max(1, Math.min(5, Math.round(n)));
+}
+
+// Human-readable age of the last push, shown to the ranker as a maintenance
+// signal so it can avoid recommending abandoned repos.
+function relativeAge(iso: string | null): string {
+  if (!iso) return "unknown";
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days < 30) return "this month";
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${(days / 365).toFixed(1).replace(/\.0$/, "")}y ago`;
 }
