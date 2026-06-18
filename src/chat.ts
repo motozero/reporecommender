@@ -114,6 +114,12 @@ export async function handleChat(request: Request, env: ChatEnv, ctx: ExecutionC
     /* no history yet */
   }
 
+  // Persist the user's message immediately, AWAITED (not via waitUntil), so no
+  // turn is ever lost mid-conversation, even if the model call below fails. This
+  // is the fix for follow-up messages silently dropping when the waitUntil work
+  // was discarded after the response returned.
+  await insertMessage(env, sessionId, "user", message);
+
   let reply: string;
   try {
     const system = await buildSystem(repo, input, goal, env);
@@ -128,34 +134,35 @@ export async function handleChat(request: Request, env: ChatEnv, ctx: ExecutionC
     return Response.json({ error: err instanceof Error ? err.message : "Chat failed." }, { status: 502 });
   }
 
-  // Persist the turn (do not block the response on it).
-  ctx.waitUntil(
-    (async () => {
-      try {
-        await env.DB.prepare("INSERT INTO chat_messages (session_id, created_at, role, content) VALUES (?,?,?,?)").bind(sessionId, now(), "user", message).run();
-        await env.DB.prepare("INSERT INTO chat_messages (session_id, created_at, role, content) VALUES (?,?,?,?)").bind(sessionId, now(), "assistant", reply).run();
-      } catch (err) {
-        console.log("d1 chat_messages error", err instanceof Error ? err.message : String(err));
-      }
-      if (isNew) {
-        const link = `https://reporecommender.com/c/${sessionId}`;
-        await notify(
-          env,
-          [
-            "💬 <b>New chat with a repo</b>",
-            `${tgEsc(vid8(vId))} is chatting with ${tgEsc(repo)}`,
-            input ? `Building: ${tgEsc(input)}${goal ? " / " + tgEsc(goal) : ""}` : "",
-            `${tgEsc(locationLine(v))} · ${tgEsc(v.browser)}/${tgEsc(v.os)}`,
-            `Transcript: ${link}`,
-          ]
-            .filter(Boolean)
-            .join("\n"),
-        );
-      }
-    })(),
-  );
+  await insertMessage(env, sessionId, "assistant", reply);
+
+  if (isNew) {
+    const link = `https://reporecommender.com/c/${sessionId}`;
+    ctx.waitUntil(
+      notify(
+        env,
+        [
+          "💬 <b>New chat with a repo</b>",
+          `${tgEsc(vid8(vId))} is chatting with ${tgEsc(repo)}`,
+          input ? `Building: ${tgEsc(input)}${goal ? " / " + tgEsc(goal) : ""}` : "",
+          `${tgEsc(locationLine(v))} · ${tgEsc(v.browser)}/${tgEsc(v.os)}`,
+          `Transcript: ${link}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      ),
+    );
+  }
 
   return Response.json({ reply });
+}
+
+async function insertMessage(env: ChatEnv, sessionId: string, role: string, content: string): Promise<void> {
+  try {
+    await env.DB.prepare("INSERT INTO chat_messages (session_id, created_at, role, content) VALUES (?,?,?,?)").bind(sessionId, now(), role, content).run();
+  } catch (err) {
+    console.log("d1 chat_messages error", err instanceof Error ? err.message : String(err));
+  }
 }
 
 async function buildSystem(repo: string, input: string, goal: string, env: ChatEnv): Promise<string> {
