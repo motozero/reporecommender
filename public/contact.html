@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Contact: Repo Recommender</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <nav class="topnav">
+      <a class="brand" href="/">
+        <span class="radar" aria-hidden="true"></span>
+        <span>Repo<span class="accent">Recommender</span></span>
+      </a>
+      <div class="navlinks">
+        <a href="/faq">FAQ</a>
+        <a href="/about">About</a>
+        <a href="/contact" aria-current="page">Contact</a>
+      </div>
+    </nav>
+
+    <main class="wrap page">
+      <h1>Contact</h1>
+      <p class="page-lede">Questions, ideas, or want help adding open source to your site (or pitching it
+        for someone else's)? Send a note and it lands in my inbox.</p>
+
+      <form id="contact-form" class="contact">
+        <div class="field">
+          <label for="name">Name</label>
+          <input id="name" name="name" type="text" autocomplete="name" maxlength="120" required />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="email" maxlength="200" required />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" rows="6" maxlength="4000" required></textarea>
+        </div>
+        <!-- Honeypot: humans leave this empty; bots tend to fill it. -->
+        <div class="hp" aria-hidden="true">
+          <label for="website">Website</label>
+          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+        <button id="contact-submit" type="submit">Send</button>
+      </form>
+
+      <p id="contact-status" class="status" hidden></p>
+    </main>
+
+    <footer class="foot">
+      <span>Built in the open with Claude Code.</span>
+      <a href="https://github.com/motozero/reporecommender" target="_blank" rel="noopener">Source and lessons</a>
+    </footer>
+    <script src="/app.js"></script>
+  </body>
+</html>

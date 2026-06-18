@@ -8,3 +8,13 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
 # GitHub personal access token, read-only public scope, for search rate limits.
 # Optional. Leave blank to run unauthenticated (60 requests/hour, fine for dev).
 GITHUB_TOKEN=
+
+# Contact form (Resend). Optional: leave blank and /api/contact returns a clear
+# "not configured" error. RESEND_API_KEY is from resend.com. CONTACT_TO_EMAIL is
+# where messages are delivered. With the default sender, Resend only delivers to
+# your Resend account email; set a verified domain in CONTACT_FROM_EMAIL to send
+# anywhere. In production set these with `wrangler secret put <NAME>`.
+RESEND_API_KEY=
+CONTACT_TO_EMAIL=
+CONTACT_FROM_EMAIL=
+

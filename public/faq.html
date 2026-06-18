@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FAQ: Repo Recommender</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <nav class="topnav">
+      <a class="brand" href="/">
+        <span class="radar" aria-hidden="true"></span>
+        <span>Repo<span class="accent">Recommender</span></span>
+      </a>
+      <div class="navlinks">
+        <a href="/faq" aria-current="page">FAQ</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+      </div>
+    </nav>
+
+    <main class="wrap page">
+      <h1>FAQ</h1>
+
+      <div class="faq">
+        <article class="qa">
+          <h2>What are people doing here?</h2>
+          <p>Finding open source to add a capability to a website or a codebase. You paste a site and say
+            what you want next (web scraping, payments, video avatars), and you get the GitHub projects
+            that do it, each with why it fits and how to wire it in. Use it on your own site, or on
+            someone else's.</p>
+        </article>
+
+        <article class="qa">
+          <h2>What is a GitHub repo?</h2>
+          <p>A repo (short for repository) is a project's code, hosted on GitHub. Almost every open source
+            tool lives in one. When this tool recommends a repo, it is pointing you at a real, installable
+            project (its code, its docs, and the community around it) that you can add to yours.</p>
+        </article>
+
+        <article class="qa">
+          <h2>Is the open source it recommends free?</h2>
+          <p>Yes. Open source means the code is public and free to use, change, and ship. That is the
+            whole idea. You do not pay to use these projects. You might choose to pay for hosting or a
+            managed version of something, but the library itself is free.</p>
+        </article>
+
+        <article class="qa">
+          <h2>Do I need to worry about licensing?</h2>
+          <p>Usually not. Most popular projects use permissive licenses (MIT, Apache 2.0, BSD) that let
+            you use them commercially as long as you keep the license and attribution. A few use copyleft
+            licenses (GPL, AGPL) that ask you to share your changes under the same terms, so glance at the
+            license file if you are shipping a closed product. For the common MIT or Apache case, you are
+            fine. This is a guide, not legal advice.</p>
+        </article>
+
+        <article class="qa">
+          <h2>Can I use this for someone else's site?</h2>
+          <p>Yes, and it is one of the best ways to use it. Paste their site, find the right open source
+            for a gap they have, and pitch them on adding it. Plenty of people do this as paid integration
+            work: you bring the project and the plan, they get a better site.</p>
+        </article>
+
+        <article class="qa">
+          <h2>Do I need to know how to code?</h2>
+          <p>A little helps for reading the recommendations. To actually integrate a project you will want
+            a developer, or an AI coding tool like Claude Code. The "how" line on each result card is the
+            starting point for that work.</p>
+        </article>
+      </div>
+
+      <p class="page-cta">Still curious? <a href="/contact">Send a question</a> or
+        <a href="/">try the tool</a>.</p>
+    </main>
+
+    <footer class="foot">
+      <span>Built in the open with Claude Code.</span>
+      <a href="https://github.com/motozero/reporecommender" target="_blank" rel="noopener">Source and lessons</a>
+    </footer>
+  </body>
+</html>

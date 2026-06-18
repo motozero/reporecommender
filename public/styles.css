@@ -24,15 +24,36 @@ body {
 .wrap {
   width: min(900px, 92vw);
   margin: 0 auto;
-  padding: 48px 0 80px;
+  padding: 30px 0 64px;
 }
 
-.masthead {
+.topnav {
+  width: min(900px, 92vw);
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 22px;
 }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.navlinks { display: flex; gap: 18px; }
+.navlinks a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+.navlinks a:hover { color: var(--ink); }
+.navlinks a[aria-current="page"] { color: var(--green); }
 
 .radar {
   width: 26px;
@@ -49,15 +70,23 @@ body {
   background: conic-gradient(from 0deg, transparent 0 280deg, rgba(33, 192, 139, 0.6) 360deg);
 }
 
-h1 { font-size: 30px; margin: 0; letter-spacing: -0.02em; }
 .accent { color: var(--green); }
 
-.tagline {
+/* Home hero */
+.hero { text-align: center; margin: 8px auto 26px; }
+.hero h1 {
+  font-size: clamp(27px, 5vw, 38px);
+  line-height: 1.15;
+  margin: 0 auto;
+  max-width: 18ch;
+  letter-spacing: -0.02em;
+}
+.pitch {
   color: var(--muted);
-  font-size: 18px;
+  font-size: 16px;
   text-align: center;
-  margin: 16px auto 32px;
-  max-width: 36ch;
+  margin: 16px auto 0;
+  max-width: 60ch;
 }
 
 /* Form */
@@ -170,6 +199,111 @@ button#submit:disabled { opacity: 0.55; cursor: progress; }
   color: var(--muted);
 }
 
+/* Example buttons */
+.examples {
+  margin: 14px 2px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.examples-label { font-size: 13px; color: var(--muted); }
+.example {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.example:hover { border-color: var(--green); }
+.example .ex-goal {
+  color: var(--green);
+  font-size: 12px;
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+}
+
+/* Sub-pages (FAQ, About, Contact) */
+.page { max-width: min(720px, 92vw); }
+.page h1 { font-size: 26px; margin: 6px 0 22px; letter-spacing: -0.01em; }
+.page-lede { color: var(--muted); margin: 0 0 24px; max-width: 60ch; }
+.page-cta { margin-top: 28px; color: var(--muted); font-size: 14px; }
+.page-cta a, .prose a, .page-lede a { color: var(--green); }
+
+.prose p { margin: 0 0 16px; color: #cdd9d7; }
+.prose a { text-decoration: none; }
+.prose a:hover { text-decoration: underline; }
+
+.faq { display: flex; flex-direction: column; gap: 18px; }
+.qa {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.qa h2 { font-size: 15.5px; margin: 0 0 7px; font-weight: 650; }
+.qa p { margin: 0; color: #cdd9d7; font-size: 14px; }
+
+/* Contact form */
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  max-width: 520px;
+}
+.contact .field { gap: 6px; }
+.contact textarea {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--ink);
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 15px;
+  resize: vertical;
+}
+.contact textarea:focus { outline: none; border-color: var(--green); }
+.contact button {
+  background: var(--green);
+  color: #04130d;
+  border: 0;
+  border-radius: 9px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  align-self: start;
+}
+.contact button:disabled { opacity: 0.55; cursor: progress; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Footer */
+.foot {
+  width: min(900px, 92vw);
+  margin: 40px auto 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+.foot a { color: var(--muted); text-decoration: none; }
+.foot a:hover { color: var(--green); }
+
 @media (max-width: 640px) {
   .finder { grid-template-columns: 1fr; }
+  .navlinks { gap: 14px; }
 }

@@ -1,17 +1,37 @@
+// One script, loaded on the home page and the contact page. Each block guards on
+// the element it needs, so it is safe wherever it runs.
+
 const form = document.getElementById("form");
 const submit = document.getElementById("submit");
 const statusEl = document.getElementById("status");
 const sourceEl = document.getElementById("source");
 const resultsEl = document.getElementById("results");
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const repoUrl = document.getElementById("repoUrl").value.trim();
-  const goal = document.getElementById("goal").value.trim();
-  if (!repoUrl || !goal) return;
+// Home page: the recommender.
+if (form) {
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    run(document.getElementById("repoUrl").value.trim(), document.getElementById("goal").value.trim());
+  });
 
+  // Example buttons fill the form and run it, so a first-time visitor sees a real
+  // result without having to think of an input.
+  document.querySelectorAll(".example").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const site = btn.getAttribute("data-site");
+      const goal = btn.getAttribute("data-goal");
+      document.getElementById("repoUrl").value = site;
+      document.getElementById("goal").value = goal;
+      run(site, goal);
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+}
+
+async function run(repoUrl, goal) {
+  if (!repoUrl || !goal) return;
   setBusy(true);
-  showStatus("Reading the repo, then searching GitHub for complements. This takes a few seconds.");
+  showStatus("Reading your site, then searching GitHub for projects that add this. This takes a few seconds.");
   sourceEl.hidden = true;
   resultsEl.innerHTML = "";
 
@@ -29,7 +49,7 @@ form.addEventListener("submit", async (e) => {
   } finally {
     setBusy(false);
   }
-});
+}
 
 function render(data) {
   if (data.source) {
@@ -44,10 +64,10 @@ function render(data) {
 
   const recs = data.recommendations || [];
   if (recs.length === 0) {
-    showStatus("No complements found for that goal. Try rephrasing it.", false);
+    showStatus("Nothing found for that goal. Try rephrasing it.", false);
     return;
   }
-  showStatus(`${recs.length} complements for "${escapeHtml(data.goal)}".`);
+  showStatus(`${recs.length} projects to add "${escapeHtml(data.goal)}".`);
   resultsEl.innerHTML = recs.map(card).join("");
 }
 
@@ -104,13 +124,58 @@ function formatStars(n) {
 
 function setBusy(busy) {
   submit.disabled = busy;
-  submit.textContent = busy ? "Working..." : "Find complements";
+  submit.textContent = busy ? "Working..." : "Find enhancements";
 }
 
 function showStatus(msg, isError) {
   statusEl.textContent = msg;
   statusEl.classList.toggle("error", Boolean(isError));
   statusEl.hidden = false;
+}
+
+// Contact page: post to the Resend-backed endpoint.
+const contactForm = document.getElementById("contact-form");
+if (contactForm) {
+  const contactStatus = document.getElementById("contact-status");
+  const contactSubmit = document.getElementById("contact-submit");
+
+  contactForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = {
+      name: document.getElementById("name").value.trim(),
+      email: document.getElementById("email").value.trim(),
+      message: document.getElementById("message").value.trim(),
+      website: document.getElementById("website").value.trim(), // honeypot
+    };
+    if (!payload.name || !payload.email || !payload.message) return;
+
+    contactSubmit.disabled = true;
+    contactSubmit.textContent = "Sending...";
+    setContactStatus("Sending your message.");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Could not send (${res.status}).`);
+      contactForm.reset();
+      setContactStatus("Thanks. Your message is on its way.");
+    } catch (err) {
+      setContactStatus(err.message || "Something went wrong.", true);
+    } finally {
+      contactSubmit.disabled = false;
+      contactSubmit.textContent = "Send";
+    }
+  });
+
+  function setContactStatus(msg, isError) {
+    contactStatus.textContent = msg;
+    contactStatus.classList.toggle("error", Boolean(isError));
+    contactStatus.hidden = false;
+  }
 }
 
 function escapeHtml(s) {
