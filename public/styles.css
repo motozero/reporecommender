@@ -81,12 +81,26 @@ body {
   max-width: 18ch;
   letter-spacing: -0.02em;
 }
+.subtitle {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+  margin: 14px auto 0;
+  max-width: 46ch;
+}
 .pitch {
   color: var(--muted);
   font-size: 16px;
   text-align: center;
-  margin: 16px auto 0;
+  margin: 14px auto 0;
   max-width: 60ch;
+}
+.hero-tag {
+  color: var(--green);
+  font-size: 13px;
+  text-align: center;
+  margin: 16px auto 0;
 }
 
 /* Form */
