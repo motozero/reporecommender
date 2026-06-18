@@ -69,6 +69,12 @@ latency; [subagents](./lessons/11-subagents.md); [hooks](./lessons/12-hooks.md);
 [owning your tests](./lessons/17-tests.md); [running evals](./lessons/18-evals.md);
 [deploy](./lessons/19-deploy.md).
 
+**Shipping real features:** turning the tool into a product, the disciplined way.
+[Persistence with D1](./lessons/20-persistence-with-d1.md);
+[integrations, email and notifications](./lessons/21-integrations-email-and-notifications.md);
+[building an AI chat feature](./lessons/22-ai-chat-feature.md);
+[anonymous analytics and an admin dashboard](./lessons/23-analytics-and-admin.md).
+
 ## Built with Claude Code
 
 This repo is a disciplined build: plan mode, a `CLAUDE.md` that steers the work, custom skills, a

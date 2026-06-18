@@ -1,0 +1,11 @@
+graph LR
+  IN["repo or website + goal"] --> ENG["recommend() engine"]
+  ENG --> API["Web API /api/recommend"]
+  ENG --> MCP["MCP server /mcp"]
+  API --> WEB["website: cards + chat"]
+  MCP --> AGENTS["Claude Code or any agent"]
+  WEB --> EVT["/api/event, /api/chat, /api/contact"]
+  EVT --> D1["D1 database"]
+  EVT --> TG["Telegram alerts"]
+  D1 --> ADMIN["/admin dashboard"]
+  D1 --> TR["/c transcript"]

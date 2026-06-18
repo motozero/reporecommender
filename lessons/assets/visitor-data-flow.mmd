@@ -1,0 +1,7 @@
+graph LR
+  V["anonymous visitor, cookie id"] --> ACT["search, click, chat, contact"]
+  ACT --> W["Worker reads request.cf: geo, ASN, device"]
+  W --> D1["D1 tables"]
+  W --> TG["Telegram ping"]
+  D1 --> ADM["owner: /admin dashboard"]
+  D1 --> TR["owner: /c transcript"]

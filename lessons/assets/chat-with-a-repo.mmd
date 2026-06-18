@@ -1,0 +1,10 @@
+graph LR
+  CARD["Chat button on a repo card"] --> CHAT["/api/chat"]
+  CHAT --> CTX["repo README + metadata"]
+  CHAT --> HIST["prior turns from D1"]
+  CTX --> CLAUDE["Claude, multi-turn"]
+  HIST --> CLAUDE
+  CLAUDE --> REPLY["reply to the visitor"]
+  CHAT --> STORE["store each turn in D1"]
+  CHAT --> PING["Telegram ping per turn"]
+  STORE --> VIEW["owner reads /c transcript"]
