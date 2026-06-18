@@ -22,9 +22,9 @@
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["RecommenderMCP"] }
+  ],
+  // Contact messages and tool-usage events. Schema in schema.sql.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "reporecommender", "database_id": "97eb8d7f-87c1-4034-bd94-1f86357229a5" }
   ]
-  // Added later (D1 lesson):
-  // "d1_databases": [
-  //   { "binding": "DB", "database_name": "reporecommender", "database_id": "<from wrangler d1 create>" }
-  // ]
 }
