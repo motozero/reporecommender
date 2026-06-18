@@ -84,10 +84,11 @@ body {
 }
 .hero h1 {
   font-size: clamp(27px, 5vw, 38px);
-  line-height: 1.15;
+  line-height: 1.2;
   margin: 0 auto;
-  max-width: 18ch;
-  letter-spacing: -0.02em;
+  max-width: 26ch;
+  letter-spacing: -0.01em;
+  word-spacing: 0.4em;
 }
 .subtitle {
   color: var(--ink);
