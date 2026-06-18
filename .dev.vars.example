@@ -25,4 +25,8 @@ CONTACT_FROM_EMAIL=
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 
+# Password for the /admin activity dashboard (HTTP Basic auth, any username).
+# Until set, /admin returns "not configured". In production: wrangler secret put.
+ADMIN_PASSWORD=
+
 

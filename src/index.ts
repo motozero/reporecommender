@@ -1,6 +1,7 @@
 import { recommend, type EngineEnv } from "./engine";
 import { RecommenderMCP } from "./mcp";
 import { handleEvent, handleChat, renderTranscript } from "./chat";
+import { handleAdmin } from "./admin";
 import { visitor, notify, tgEsc, locationLine, networkLine, type Visitor } from "./telemetry";
 
 export { RecommenderMCP };
@@ -15,6 +16,7 @@ export interface Env extends EngineEnv {
   CONTACT_FROM_EMAIL?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
+  ADMIN_PASSWORD?: string;
 }
 
 export default {
@@ -57,6 +59,11 @@ export default {
     if (url.pathname.startsWith("/c/") && request.method === "GET") {
       const id = url.pathname.slice(3);
       if (id) return renderTranscript(id, env);
+    }
+
+    // Password-protected activity dashboard.
+    if (url.pathname === "/admin" && request.method === "GET") {
+      return handleAdmin(request, env);
     }
 
     return env.ASSETS.fetch(request);
