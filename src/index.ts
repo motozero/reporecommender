@@ -1,5 +1,7 @@
 import { recommend, type EngineEnv } from "./engine";
 import { RecommenderMCP } from "./mcp";
+import { handleEvent, handleChat, renderTranscript } from "./chat";
+import { visitor, notify, tgEsc, locationLine, networkLine, type Visitor } from "./telemetry";
 
 export { RecommenderMCP };
 
@@ -28,7 +30,7 @@ export default {
     }
 
     if (url.pathname === "/api/health") {
-      return Response.json({ ok: true, service: "reporecommender", version: "0.4.0" });
+      return Response.json({ ok: true, service: "reporecommender", version: "0.5.0" });
     }
 
     if (url.pathname === "/api/recommend" && request.method === "POST") {
@@ -39,8 +41,22 @@ export default {
       return handleContact(request, env, ctx);
     }
 
+    if (url.pathname === "/api/event" && request.method === "POST") {
+      return handleEvent(request, env, ctx);
+    }
+
+    if (url.pathname === "/api/chat" && request.method === "POST") {
+      return handleChat(request, env, ctx);
+    }
+
     if (url.pathname.startsWith("/api/")) {
       return Response.json({ error: "not found" }, { status: 404 });
+    }
+
+    // Read-only chat transcript at /c/<session_id>.
+    if (url.pathname.startsWith("/c/") && request.method === "GET") {
+      const id = url.pathname.slice(3);
+      if (id) return renderTranscript(id, env);
     }
 
     return env.ASSETS.fetch(request);
@@ -140,115 +156,16 @@ async function handleContact(request: Request, env: Env, ctx: ExecutionContext):
   return Response.json({ error: "Could not send the message. Please try again later." }, { status: 502 });
 }
 
-// ---------------------------------------------------------------------------
-// Visitor details, notifications, and logging.
-// ---------------------------------------------------------------------------
-
-interface Visitor {
-  ip: string;
-  ua: string;
-  browser: string;
-  os: string;
-  asn: number | null;
-  asOrg: string;
-  country: string;
-  city: string;
-  region: string;
-  timezone: string;
-  colo: string;
-}
-
-// Cloudflare attaches rich request metadata on `request.cf`, the same signals a
-// site analytics tool surfaces (ASN, geo, colo). User agent gives browser and OS.
-function visitor(request: Request): Visitor {
-  const cf = (request.cf ?? {}) as Record<string, unknown>;
-  const ua = request.headers.get("user-agent") ?? "";
-  const str = (k: string) => (typeof cf[k] === "string" ? (cf[k] as string) : "");
-  const { browser, os } = parseUA(ua);
-  return {
-    ip: request.headers.get("cf-connecting-ip") ?? "",
-    ua,
-    browser,
-    os,
-    asn: typeof cf.asn === "number" ? (cf.asn as number) : null,
-    asOrg: str("asOrganization"),
-    country: str("country"),
-    city: str("city"),
-    region: str("region"),
-    timezone: str("timezone"),
-    colo: str("colo"),
-  };
-}
-
-function parseUA(ua: string): { browser: string; os: string } {
-  const browser = /Edg\//.test(ua)
-    ? "Edge"
-    : /OPR\/|Opera/.test(ua)
-      ? "Opera"
-      : /Chrome\//.test(ua)
-        ? "Chrome"
-        : /Firefox\//.test(ua)
-          ? "Firefox"
-          : /Safari\//.test(ua)
-            ? "Safari"
-            : "Unknown";
-  const os = /Windows/.test(ua)
-    ? "Windows"
-    : /Mac OS X|Macintosh/.test(ua)
-      ? "macOS"
-      : /Android/.test(ua)
-        ? "Android"
-        : /iPhone|iPad|iOS/.test(ua)
-          ? "iOS"
-          : /Linux/.test(ua)
-            ? "Linux"
-            : "Unknown";
-  return { browser, os };
-}
-
 async function logUsage(env: Env, input: string, goal: string, v: Visitor): Promise<void> {
   if (!env.DB) return;
   try {
     await env.DB.prepare(
       "INSERT INTO usage (created_at, input, goal, ip, user_agent, browser, os, asn, as_org, country, city, region, timezone, colo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     )
-      .bind(
-        new Date().toISOString(),
-        input,
-        goal,
-        v.ip,
-        v.ua,
-        v.browser,
-        v.os,
-        v.asn,
-        v.asOrg,
-        v.country,
-        v.city,
-        v.region,
-        v.timezone,
-        v.colo,
-      )
+      .bind(new Date().toISOString(), input, goal, v.ip, v.ua, v.browser, v.os, v.asn, v.asOrg, v.country, v.city, v.region, v.timezone, v.colo)
       .run();
   } catch (err) {
     console.log("d1 usage error", err instanceof Error ? err.message : String(err));
-  }
-}
-
-async function notify(env: Env, text: string): Promise<void> {
-  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return;
-  try {
-    await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        chat_id: env.TELEGRAM_CHAT_ID,
-        text,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-      }),
-    });
-  } catch (err) {
-    console.log("telegram error", err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -276,18 +193,6 @@ async function sendContactEmail(env: Env, name: string, email: string, message: 
     console.log("resend exception", err instanceof Error ? err.message : String(err));
     return false;
   }
-}
-
-const tgEsc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-function locationLine(v: Visitor): string {
-  const geo = [v.city, v.region, v.country].filter(Boolean).join(", ") || "unknown location";
-  return v.timezone ? `${geo} (${v.timezone})` : geo;
-}
-
-function networkLine(v: Visitor): string {
-  if (v.asn) return `AS${v.asn}${v.asOrg ? " " + v.asOrg : ""}`;
-  return v.asOrg || "unknown network";
 }
 
 function usageText(input: string, goal: string, v: Visitor): string {

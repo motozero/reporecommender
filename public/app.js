@@ -7,6 +7,22 @@ const statusEl = document.getElementById("status");
 const sourceEl = document.getElementById("source");
 const resultsEl = document.getElementById("results");
 
+// The last search context, so click and chat events can carry it.
+let lastInput = "";
+let lastGoal = "";
+let openChat = function () {};
+
+// A random, anonymous visitor id kept in the browser. No email, no login: it
+// just ties a person's clicks and chats together.
+function visitorId() {
+  let id = localStorage.getItem("rr_vid");
+  if (!id) {
+    id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2);
+    localStorage.setItem("rr_vid", id);
+  }
+  return id;
+}
+
 // Home page: the recommender.
 if (form) {
   form.addEventListener("submit", (e) => {
@@ -30,6 +46,8 @@ if (form) {
 
 async function run(repoUrl, goal) {
   if (!repoUrl || !goal) return;
+  lastInput = repoUrl;
+  lastGoal = goal;
   setBusy(true);
   showStatus("Reading your site, then searching GitHub for projects that add this. This takes a few seconds.");
   sourceEl.hidden = true;
@@ -78,7 +96,7 @@ function card(r, i) {
         <span class="rank">#${i + 1}</span>
         <span class="stars">★ ${formatStars(r.stars)}</span>
       </div>
-      <a class="name" href="${escapeAttr(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.fullName)}</a>
+      <a class="name" href="${escapeAttr(r.url)}" target="_blank" rel="noopener" data-repo="${escapeAttr(r.fullName)}">${escapeHtml(r.fullName)}</a>
       <span class="lang">${escapeHtml(r.language || "")}</span>
       <p class="line"><b>What:</b> ${escapeHtml(r.whatIsIt || "")}</p>
       <p class="line"><b>Why:</b> ${escapeHtml(r.why || "")}</p>
@@ -93,6 +111,7 @@ function card(r, i) {
         <span>${metricNum(r.forks)} forks</span>
         <span>${metricNum(r.contributors)} contributors</span>
       </div>
+      <button type="button" class="chat-btn" data-repo="${escapeAttr(r.fullName)}">💬 Chat with this repo</button>
     </article>`;
 }
 
@@ -175,6 +194,99 @@ if (contactForm) {
     contactStatus.textContent = msg;
     contactStatus.classList.toggle("error", Boolean(isError));
     contactStatus.hidden = false;
+  }
+}
+
+// Repo-click tracking and chat-with-a-repo, wired by delegation on the grid.
+if (resultsEl) {
+  resultsEl.addEventListener("click", (e) => {
+    const link = e.target.closest("a.name");
+    if (link) {
+      trackClick(link.getAttribute("data-repo"));
+      return; // let the link open as normal
+    }
+    const btn = e.target.closest(".chat-btn");
+    if (btn) {
+      e.preventDefault();
+      openChat(btn.getAttribute("data-repo"));
+    }
+  });
+}
+
+function trackClick(repo) {
+  if (!repo) return;
+  try {
+    fetch("/api/event", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      keepalive: true, // still sends as the new tab opens
+      body: JSON.stringify({ visitorId: visitorId(), type: "repo_click", repo, input: lastInput, goal: lastGoal }),
+    });
+  } catch (_) {
+    /* best effort */
+  }
+}
+
+const chatModal = document.getElementById("chat-modal");
+if (chatModal) {
+  const chatTitle = document.getElementById("chat-title");
+  const chatLog = document.getElementById("chat-log");
+  const chatForm = document.getElementById("chat-form");
+  const chatText = document.getElementById("chat-text");
+  const chatClose = document.getElementById("chat-close");
+  let chatRepo = "";
+  let chatSession = "";
+
+  openChat = function (repo) {
+    chatRepo = repo;
+    chatSession = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2);
+    chatTitle.textContent = "Chat about " + repo;
+    chatLog.innerHTML = "";
+    appendChat("bot", "Ask anything about " + repo + " for your project.");
+    chatModal.hidden = false;
+    chatText.value = "";
+    chatText.focus();
+  };
+
+  const closeChat = () => {
+    chatModal.hidden = true;
+  };
+  chatClose.addEventListener("click", closeChat);
+  chatModal.addEventListener("click", (e) => {
+    if (e.target === chatModal) closeChat();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !chatModal.hidden) closeChat();
+  });
+
+  chatForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = chatText.value.trim();
+    if (!text) return;
+    appendChat("you", text);
+    chatText.value = "";
+    const thinking = appendChat("bot", "thinking...");
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ visitorId: visitorId(), sessionId: chatSession, repo: chatRepo, input: lastInput, goal: lastGoal, message: text }),
+      });
+      const data = await res.json();
+      thinking.textContent = res.ok ? data.reply || "(no reply)" : data.error || "Something went wrong.";
+    } catch (_) {
+      thinking.textContent = "Could not reach the chat service.";
+    }
+    chatLog.scrollTop = chatLog.scrollHeight;
+  });
+
+  function appendChat(who, text) {
+    const div = document.createElement("div");
+    div.className = "chat-msg " + (who === "you" ? "you" : "bot");
+    div.textContent = text;
+    chatLog.appendChild(div);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return div;
   }
 }
 

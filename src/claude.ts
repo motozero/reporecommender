@@ -47,6 +47,47 @@ export async function callClaude(opts: ClaudeOpts): Promise<string> {
     .trim();
 }
 
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Multi-turn variant for the chat-with-a-repo feature. */
+export async function callClaudeMessages(opts: {
+  apiKey: string;
+  model: string;
+  system?: string;
+  messages: ChatTurn[];
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<string> {
+  const res = await fetch(ANTHROPIC_URL, {
+    method: "POST",
+    headers: {
+      "x-api-key": opts.apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: opts.model,
+      max_tokens: opts.maxTokens ?? 800,
+      temperature: opts.temperature ?? 0.4,
+      system: opts.system,
+      messages: opts.messages,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = (await res.json()) as { content?: { type: string; text?: string }[] };
+  return (data.content ?? [])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text ?? "")
+    .join("")
+    .trim();
+}
+
 /** Pull a JSON value out of a model response, tolerating fences or stray prose. */
 export function extractJson<T>(text: string): T {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);

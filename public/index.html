@@ -22,7 +22,7 @@
 
     <main class="wrap">
       <section class="hero">
-        <p class="kicker">By builders, for builders.</p>
+        <p class="kicker">By Builders for Builders.</p>
         <h1>Build Better, for Free.</h1>
         <p class="subtitle">Free open source for what you're building, ranked by impact and effort.</p>
       </section>
@@ -65,6 +65,21 @@
       <span>Built in the open with <a href="https://code.claude.com/docs/en/overview" target="_blank" rel="noopener">Claude Code</a>.</span>
       <a href="https://github.com/motozero/reporecommender" target="_blank" rel="noopener">Source and lessons</a>
     </footer>
+
+    <div id="chat-modal" class="chat-modal" hidden>
+      <div class="chat-box">
+        <div class="chat-head">
+          <span id="chat-title">Chat</span>
+          <button id="chat-close" type="button" aria-label="Close">✕</button>
+        </div>
+        <div id="chat-log" class="chat-log" aria-live="polite"></div>
+        <form id="chat-form" class="chat-input">
+          <input id="chat-text" type="text" autocomplete="off" placeholder="Ask about this repo..." maxlength="2000" />
+          <button type="submit">Send</button>
+        </form>
+        <p class="chat-note">Chats are with an AI, not the repo's authors, and may be reviewed to improve the tool.</p>
+      </div>
+    </div>
     <script src="/app.js"></script>
   </body>
 </html>
